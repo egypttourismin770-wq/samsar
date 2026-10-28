@@ -998,7 +998,7 @@ template:'#samsar-tpl',
 data() {
   return {
     fallbackImage,
-    properties:defaultProperties(),
+    properties:defaultProperties().map(p=>({...p,isDemo:true})),
     viewings:[],
     favorites:[],
     userRatings:{},
@@ -1196,7 +1196,7 @@ methods:{
       const raw=localStorage.getItem(STORAGE_KEY);
       if(!raw)return;
       const saved=JSON.parse(raw);
-      if(Array.isArray(saved.properties))this.properties=saved.properties.map(p=>({...p,photos:Array.isArray(p.photos)&&p.photos.length?p.photos.map(photo=>typeof photo==='string'?{key:makeId('photo'),src:photo}:photo):[{key:makeId('photo'),src:this.fallbackImage}],amenities:Array.isArray(p.amenities)?p.amenities:[]}));
+      if(Array.isArray(saved.properties))this.properties=saved.properties.map(p=>({...p,isDemo:!p.isBackendRecord,photos:Array.isArray(p.photos)&&p.photos.length?p.photos.map(photo=>typeof photo==='string'?{key:makeId('photo'),src:photo}:photo):[{key:makeId('photo'),src:this.fallbackImage}],amenities:Array.isArray(p.amenities)?p.amenities:[]}));
       if(Array.isArray(saved.viewings))this.viewings=saved.viewings;
       if(Array.isArray(saved.favorites))this.favorites=saved.favorites;
       if(saved.userRatings)this.userRatings=saved.userRatings;
