@@ -507,6 +507,9 @@ body{padding-bottom:66px}
 
 img{max-width:100%}
 
+.workspace-login{position:fixed!important;inset:0!important;z-index:10000!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:auto!important;padding:22px!important;background:radial-gradient(circle at 15% 15%,#f7df9c 0%,#fffaf0 42%,#f2e4c6 100%)!important;backdrop-filter:none!important}
+.workspace-login .login-modal{width:min(100%,520px)!important;max-height:calc(100dvh - 36px)!important;overflow:auto!important;border:1px solid #e3c477!important;box-shadow:0 30px 90px #67420b24!important}
+
 /* SAMSAR PREMIUM AMBER IDENTITY */
 .samsar{--primary:#70410e;--accent:#e0a33b;--page-bg:#fffaf0;color:#2f2414}
 .brand-mark{background:linear-gradient(145deg,#f5d17e,#a86112 52%,#58330b);box-shadow:0 8px 24px #9a671e45, inset 0 1px 0 #fff9}
@@ -948,9 +951,9 @@ img{max-width:100%}
     </section>
   </div>
 
-  <div v-if="loginOpen" class="overlay" @click.self="loginOpen=false">
+  <div v-if="loginOpen" class="overlay" :class="{'workspace-login':['admin','employees','settings','staff'].includes(adminRouteMode)}" @click.self="closeLogin">
     <section class="modal login-modal">
-      <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>تسجيل الدخول</h2></div><button class="close-button" @click="loginOpen=false">✕</button></div>
+      <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>{{ ['admin','employees','settings','staff'].includes(adminRouteMode) ? 'دخول مساحة الإدارة' : 'تسجيل الدخول' }}</h2></div><button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="close-button" @click="closeLogin">✕</button></div>
       <p class="muted">{{ authMode === 'signup' ? 'أنشئ حسابًا حقيقيًا على منصة سمسار.' : 'سجّل الدخول بحسابك المسجل على سمسار.' }}</p>
       <form @submit.prevent="login" class="login-form">
         <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
@@ -1541,6 +1544,7 @@ methods:{
     const params=new URLSearchParams(window.location.search);
     const route=params.has('admin')?'admin':(params.has('employees')?'employees':(params.has('staff')?'staff':(params.has('settings')?'settings':(params.has('owner')?'owner':(params.has('customer')?'customer':(params.has('dashboard')?'dashboard':''))))));
     if(!route)return;
+    this.adminRouteMode=route;
     if(!this.sessionUser){this.openLogin();return;}
     if(route==='admin'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذا الرابط مخصص لمدير النظام فقط. سجّل الدخول بحساب الأدمن المعتمد.';this.toast('هذه مساحة خاصة بالأدمن.');return;}
     if((route==='settings'||route==='employees')&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذه الصفحة مخصصة لمدير النظام فقط.';this.toast('لا تملك صلاحية الدخول لهذه الصفحة.');return;}
@@ -1766,6 +1770,7 @@ methods:{
     this.persistDemo();
     this.toast('تم حفظ تقييمك محليًا.');
   },
+  closeLogin(){if(['admin','employees','settings','staff'].includes(this.adminRouteMode))return;this.loginOpen=false;},
   openEntryChooser(){this.entryChooserOpen=true;},
   beginSignup(role){this.signupRequestedRole=role==='owner'?'owner':'customer';this.signupName='';this.signupPhone='';this.signupAddress='';this.entryChooserOpen=false;this.authMode='signup';this.loginError='';this.loginOpen=true;},
   openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
