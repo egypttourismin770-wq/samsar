@@ -537,10 +537,11 @@ img{max-width:100%}
       <button class="icon-button" title="الإشعارات" @click="notificationsOpen = !notificationsOpen">
         ♧<sup v-if="myNotifications.length">{{ myNotifications.length }}</sup>
       </button>
-      <button v-if="sessionUser && ['admin','staff'].includes(sessionUser.role)" class="small-button" @click="openAdmin">لوحة التحكم</button>
+      <button v-if="sessionUser && sessionUser.role === 'admin'" class="small-button" @click="window.location.href='./admin.html'">لوحة الإدارة</button>
+      <button v-else-if="sessionUser && sessionUser.role === 'staff'" class="small-button" @click="window.location.href='./staff.html'">مساحة الموظفين</button>
       <button v-else-if="sessionUser && sessionUser.role === 'owner'" class="small-button" @click="scrollTo('owner-workspace')">لوحة صاحب العقار</button>
-      <button v-else-if="!sessionUser" class="login-button" @click="openLogin">تسجيل الدخول</button>
-      <button v-else class="small-button" @click="scrollTo('my-viewings')">لوحة العميل</button>
+      <button v-else-if="sessionUser && sessionUser.role === 'customer'" class="small-button" @click="scrollTo('my-viewings')">حساب العميل</button>
+      <button v-else class="login-button" @click="openEntryChooser">إنشاء إعلان / حساب العميل</button>
     </div>
 
     <div v-if="notificationsOpen" class="notification-popover">
@@ -898,20 +899,33 @@ img{max-width:100%}
   </div>
 
   <!-- تسجيل الدخول -->
+  <div v-if="entryChooserOpen" class="overlay" @click.self="entryChooserOpen=false">
+    <section class="modal login-modal entry-chooser">
+      <div class="modal-heading"><div><span class="eyebrow">ابدأ مع سمسار</span><h2>إيه اللي محتاجه؟</h2></div><button class="close-button" @click="entryChooserOpen=false">✕</button></div>
+      <div class="entry-choice-grid">
+        <button class="entry-choice owner-choice" @click="beginSignup('owner')"><span>⌂</span><strong>أنا صاحب عقار</strong><small>سجّل بياناتك ثم جهّز إعلانك وصوره</small></button>
+        <button class="entry-choice customer-choice" @click="beginSignup('customer')"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
+        <button class="entry-choice track-choice" @click="entryChooserOpen=false;openLogin();trackingOpen=true"><span>▤</span><strong>متابعة رقم الطلب</strong><small>اعرض طلباتك وتفاصيل العقار بعد تسجيل الدخول</small></button>
+      </div>
+      <p class="hint">حساب صاحب العقار يبدأ بطلب اعتماد، ولا يحصل أي حساب جديد على صلاحيات الإدارة.</p>
+    </section>
+  </div>
+
   <div v-if="loginOpen" class="overlay" @click.self="loginOpen=false">
     <section class="modal login-modal">
       <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>تسجيل الدخول</h2></div><button class="close-button" @click="loginOpen=false">✕</button></div>
       <p class="muted">{{ authMode === 'signup' ? 'أنشئ حسابًا حقيقيًا على منصة سمسار.' : 'سجّل الدخول بحسابك المسجل على سمسار.' }}</p>
       <form @submit.prevent="login" class="login-form">
         <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
-        <label v-if="authMode === 'signup'">رقم الهاتف (اختياري)<input v-model.trim="signupPhone" type="tel" maxlength="25" autocomplete="tel" /></label>
+        <label v-if="authMode === 'signup'">رقم الهاتف *<input v-model.trim="signupPhone" type="tel" required maxlength="25" autocomplete="tel" /></label>
+        <label v-if="authMode === 'signup'">العنوان *<input v-model.trim="signupAddress" required maxlength="250" autocomplete="street-address" placeholder="المحافظة، المدينة، المنطقة" /></label>
         <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required autocomplete="username" /></label>
         <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="authMode === 'signup' ? 'new-password' : 'current-password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
         <button type="submit" class="primary-button full-width">{{ authMode === 'signup' ? 'إنشاء حساب' : 'دخول للحساب' }}</button>
         <button type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
       </form>
-      <p class="hint">الحساب الجديد يبدأ بصلاحية عميل. حساب المالك أو الموظف يحتاج اعتماد الإدارة؛ لا تستخدم هذا النموذج لرفع الصلاحيات.</p>
+      <p class="hint">{{ signupRequestedRole==='owner' ? 'سيتم تسجيل طلب حساب صاحب عقار، وتُعتمد صلاحية المالك من الإدارة قبل نشر إعلانات حقيقية.' : 'الحساب الجديد يبدأ بصلاحية عميل، ولا يمكن تغيير الصلاحية إلى مالك أو موظف إلا من الإدارة.' }}</p>
     </section>
   </div>
 
@@ -938,9 +952,9 @@ img{max-width:100%}
   <div v-if="listingPaymentOpen" class="overlay" @click.self="listingPaymentOpen=false"><section class="modal login-modal"><div class="modal-heading"><div><span class="eyebrow">الخطوة التالية — مراجعة الدفع</span><h2>رسوم إنشاء الإعلان</h2></div><button class="close-button" @click="listingPaymentOpen=false">✕</button></div><div class="policy-card"><div><span>رسوم الإعلان</span><strong>{{ money(paymentPolicy.owner_listing_fee_egp) }}</strong></div><div><span>حالة الإعلان</span><strong>مسودة — لا تظهر للعامة حتى مراجعة الإدارة</strong></div></div><div v-if="!availablePaymentMethods.length" class="demo-info">لا توجد وسيلة دفع مفعّلة حاليًا. لن يتم تحصيل أي مبلغ. على المدير إضافة بيانات الحساب وتعليمات التحويل من لوحة الإدارة ثم تفعيل الوسيلة.</div><form v-else class="login-form" @submit.prevent="submitListingFeePayment"><label>اختار وسيلة الدفع *<select v-model="selectedPaymentMethodId" required><option value="" disabled>اختار طريقة دفع</option><option v-for="method in availablePaymentMethods" :key="method.id" :value="method.id">{{ method.display_name }}</option></select></label><div v-if="availablePaymentMethods.find(m=>m.id===selectedPaymentMethodId)" class="policy-card"><div><span>اسم الحساب</span><strong>{{ availablePaymentMethods.find(m=>m.id===selectedPaymentMethodId).account_label || availablePaymentMethods.find(m=>m.id===selectedPaymentMethodId).display_name }}</strong></div><div><span>رقم التحويل / الحساب</span><strong>{{ availablePaymentMethods.find(m=>m.id===selectedPaymentMethodId).account_identifier }}</strong></div><p>{{ availablePaymentMethods.find(m=>m.id===selectedPaymentMethodId).instructions }}</p></div><label>رقم العملية (اختياري)<input v-model.trim="paymentPayerReference" maxlength="120" placeholder="مرجع التحويل أو رقم العملية" /></label><label>إثبات الدفع *<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" @change="onPaymentReceiptSelect" required /><small>{{ paymentReceiptName || 'مطلوب للمراجعة: اختر صورة أو PDF لا يزيد عن 5 ميجابايت' }}</small></label><div class="policy-note">سيتم إرسال الإثبات للمدير لمراجعته. لا يعني رفع الإيصال أن الدفع تأكد؛ لن ينتقل الإعلان للمراجعة إلا بعد اعتماد المدير.</div><button class="primary-button full-width" type="submit" :disabled="paymentBusy || !selectedPaymentMethodId">{{ paymentBusy ? 'جارٍ الإرسال...' : 'إرسال إثبات الدفع للمراجعة' }}</button></form><div v-if="!availablePaymentMethods.length" class="inline-actions"><button class="outline-light-button" @click="listingPaymentOpen=false">إغلاق والمتابعة لاحقًا</button><button class="primary-button" @click="loadAvailablePaymentMethods">إعادة فحص وسائل الدفع</button></div></section></div>
 
   <!-- لوحة الإدارة بقائمة جانبية -->
-  <div v-if="adminOpen" class="overlay admin-overlay" @click.self="closeAdmin">
+  <div v-if="adminOpen" class="overlay admin-overlay" :class="{'admin-standalone':['admin','employees','settings'].includes(adminRouteMode),'staff-standalone':adminRouteMode==='staff'}" @click.self="closeAdmin">
     <section class="admin-shell">
-      <header class="admin-header" :class="sessionUser?.role==='staff'?'staff-admin-header':''"><div><span class="eyebrow">{{ sessionUser?.role === 'admin' ? 'مركز إدارة سمسار' : 'مركز تشغيل سمسار' }}</span><h2>{{ sessionUser?.role === 'admin' ? 'لوحة الإدارة الرئيسية' : 'لوحة تشغيل الموظفين' }}</h2><p>مرحبًا {{ sessionUser?.name }} · {{ backendReady ? 'متصل بقاعدة البيانات' : 'جارٍ التحقق من الاتصال' }}</p></div><button class="close-button" @click="closeAdmin">✕</button></header>
+      <header class="admin-header" :class="sessionUser?.role==='staff'?'staff-admin-header':''"><div><span class="eyebrow">{{ sessionUser?.role === 'admin' ? 'مركز إدارة سمسار' : 'مركز تشغيل سمسار' }}</span><h2>{{ sessionUser?.role === 'admin' ? 'لوحة الإدارة الرئيسية' : 'لوحة تشغيل الموظفين' }}</h2><p>مرحبًا {{ sessionUser?.name }} · {{ backendReady ? 'متصل بقاعدة البيانات' : 'جارٍ التحقق من الاتصال' }}</p></div><button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="close-button" @click="closeAdmin">✕</button></header>
       <div class="admin-layout">
         <aside class="admin-sidebar">
           <div class="sidebar-brand"><span class="brand-mark">⌂</span><strong>سمسار</strong><small>{{ sessionUser?.role === 'admin' ? 'إدارة المنصة' : 'مساحة الموظفين' }}</small></div>
@@ -1198,6 +1212,13 @@ data() {
     adminOpen:false,
     adminRouteMode:'',
     adminTab:'overview',
+    entryChooserOpen:false,
+    trackingOpen:false,
+    signupRequestedRole:'customer',
+    signupAddress:'',
+    adminListingSearch:'',
+    adminListingFilter:'all',
+    adminListingStatus:'published',
     listingChartFilter:'all',
     listingFormOpen:false,
     editingListingId:'',
@@ -1213,10 +1234,10 @@ data() {
       {id:'overview',label:'نظرة عامة',icon:'▦',roles:['admin','staff']},
       {id:'listings',label:'العقارات',icon:'⌂',roles:['admin','staff']},
       {id:'viewings',label:'طلبات المعاينة',icon:'▤',roles:['admin','staff']},
-      {id:'inquiries',label:'استفسارات العملاء',icon:'✉',roles:['admin','staff']},
+      {id:'inquiries',label:'استفسارات العملاء',icon:'✉',roles:['admin']},
       {id:'customers',label:'المستخدمون',icon:'♙',roles:['admin']},
       {id:'staff',label:'فريق العمل',icon:'♧',roles:['admin']},
-      {id:'assistant',label:'مساعد الموظفين',icon:'✧',roles:['admin','staff']},
+      {id:'assistant',label:'مساعد الموظفين',icon:'✧',roles:['admin']},
       {id:'refunds',label:'الاستردادات',icon:'↻',roles:['admin']},
       {id:'finance',label:'التقارير المالية',icon:'▥',roles:['admin']},
       {id:'payments',label:'الدفع ورسوم الإعلانات',icon:'▣',roles:['admin']},
@@ -1681,15 +1702,19 @@ methods:{
     this.persistDemo();
     this.toast('تم حفظ تقييمك محليًا.');
   },
-  openLogin(){this.loginError='';this.loginOpen=true;},
+  openEntryChooser(){this.entryChooserOpen=true;},
+  beginSignup(role){this.signupRequestedRole=role==='owner'?'owner':'customer';this.signupName='';this.signupPhone='';this.signupAddress='';this.entryChooserOpen=false;this.authMode='signup';this.loginError='';this.loginOpen=true;},
+  openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
   async login(){
     if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
     const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password;this.loginError='';
     try{
       if(this.authMode==='signup'){
         if(this.signupName.trim().length<2){this.loginError='اكتب اسمك بالكامل.';return;}
-        const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim()||null}}});if(error)throw error;
-        if(data.session){await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast('تم إنشاء الحساب. حسابك يبدأ كعميل.');}
+        if(this.signupPhone.trim().length<7){this.loginError='اكتب رقم هاتف صحيحًا للتواصل.';return;}
+        if(this.signupAddress.trim().length<4){this.loginError='اكتب عنوانك الأساسي.';return;}
+        const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim(),requested_role:this.signupRequestedRole}}});if(error)throw error;
+        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء الحساب وطلب اعتمادك كصاحب عقار. الإدارة تعتمد الصلاحية قبل النشر.':'تم إنشاء حساب العميل بنجاح.');if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
         else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
       }else{
         const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
@@ -1702,9 +1727,11 @@ methods:{
   },
   async logout(){
     const wasBackendUser=!!this.sessionUser?.isSupabaseUser;
+    const lockedWorkspace=['admin','employees','settings','staff'].includes(this.adminRouteMode);
     if(wasBackendUser&&supabaseClient){const {error}=await supabaseClient.auth.signOut();if(error){this.toast('تعذر تسجيل الخروج من الخادم.');return;}}
-    this.sessionUser=null;this.backendProfiles=[];this.adminOpen=false;this.loginOpen=false;this.listingFormOpen=false;this.selectedProperty=null;this.viewingOpen=false;
+    this.sessionUser=null;this.backendProfiles=[];this.adminOpen=false;this.loginOpen=lockedWorkspace;this.entryChooserOpen=false;this.listingFormOpen=false;this.selectedProperty=null;this.viewingOpen=false;
     if(wasBackendUser&&supabaseClient){try{await this.loadBackendProperties();this.viewings=[];}catch(error){console.error(error);}}
+    if(lockedWorkspace){this.authMode='signin';this.loginError='تم تسجيل الخروج. سجّل الدخول مرة أخرى للوصول إلى هذه المساحة.';}
     this.toast('تم تسجيل الخروج.');
   },
   openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
