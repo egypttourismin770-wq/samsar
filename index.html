@@ -1084,7 +1084,7 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'inquiries'" class="admin-content"><h3>صندوق استفسارات العملاء</h3><p class="muted">لا تظهر أرقام أصحاب العقارات للعميل. وافق على الاستفسار لتحويله إلى مالك الإعلان من خلال حسابه، ثم راجع رد المالك واكتب الرد النهائي للعميل.</p><div v-if="staffInquiries.length" class="staff-inquiry-grid"><article v-for="inquiry in staffInquiries" :key="inquiry.id" class="inquiry-card"><div class="row-between"><h4>{{ inquiry.propertyTitle || 'عقار' }}</h4><span class="status-pill">{{ inquiry.statusLabel }}</span></div><div class="inquiry-meta"><span>الطلب {{ inquiry.id.slice(0,8) }}</span><span>{{ new Date(inquiry.createdAt).toLocaleString('ar-EG') }}</span></div><div class="inquiry-message">{{ inquiry.question }}</div><div v-if="inquiry.ownerResponse" class="inquiry-response"><strong>رد المالك الداخلي (لا يظهر للعميل قبل مراجعتك):</strong><p>{{ inquiry.ownerResponse }}</p></div><div v-if="inquiry.responseToCustomer" class="inquiry-response"><strong>الرد المرسل للعميل:</strong><p>{{ inquiry.responseToCustomer }}</p></div><div v-if="inquiry.status==='new'"><label>ملاحظة المراجع / سبب الرفض إذا لزم<textarea v-model.trim="inquiryDrafts[inquiry.id]" rows="2" maxlength="1000" placeholder="يظهر هذا النص للعميل فقط عند الرفض..."></textarea></label><div class="inline-actions"><button class="primary-button" @click="approveInquiry(inquiry)">مراجعة والموافقة وإرساله للمالك</button><button class="danger-button" @click="rejectInquiry(inquiry)">رفض مع إرسال السبب</button></div></div><div v-if="inquiry.status==='owner_replied'"><label>الرد النهائي للعميل *<textarea v-model.trim="inquiryDrafts[inquiry.id]" rows="3" maxlength="2000" placeholder="صغ الرد للعميل من المعلومات التي أرسلها المالك..."></textarea></label><button class="primary-button" @click="replyToCustomerInquiry(inquiry)" :disabled="!inquiryDrafts[inquiry.id]">إرسال الرد لحساب العميل</button></div></article></div><div v-else class="empty-state">لا توجد استفسارات. ستظهر هنا طلبات العملاء الحقيقيين عن الإعلانات المنشورة.</div></div>
 
-          <div v-if="adminTab === 'customers'" class="admin-content"><h3>المستخدمون والصلاحيات</h3><p class="muted">الحسابات الحقيقية في قاعدة البيانات. الحساب الجديد يبدأ كعميل، وتظهر شارة «جديد» للحسابات المسجلة خلال آخر 7 أيام.</p><div class="staff-summary-grid"><div class="staff-summary-card"><span>كل الحسابات</span><strong>{{ backendProfiles.length }}</strong></div><div class="staff-summary-card"><span>عملاء</span><strong>{{ backendProfiles.filter(item=>item.role==='customer').length }}</strong></div><div class="staff-summary-card"><span>تسجيلات جديدة · 7 أيام</span><strong>{{ backendProfiles.filter(item=>item.role==='customer' && isNewProfile(item)).length }}</strong></div><div class="staff-summary-card"><span>أصحاب عقارات</span><strong>{{ backendProfiles.filter(item=>item.role==='owner').length }}</strong></div></div><article v-for="profile in backendProfiles" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }} <span v-if="profile.role==='customer' && isNewProfile(profile)" class="staff-status-pill">تسجيل جديد</span></strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="profile.id === sessionUser?.id || roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.length" class="empty-state">لا توجد حسابات للعرض أو أن حسابك ليس مدير النظام.</div><div class="policy-note">لا يمكن تغيير صلاحية مدير النظام الحالي من هنا، ولا يمكن إنشاء مدير جديد من التسجيل العام.</div></div>
+          <div v-if="adminTab === 'customers'" class="admin-content"><h3>المستخدمون والصلاحيات</h3><p class="muted">الحسابات الحقيقية في قاعدة البيانات. الحساب الجديد يبدأ كعميل، وتظهر شارة «جديد» للحسابات المسجلة خلال آخر 7 أيام.</p><div class="staff-summary-grid"><div class="staff-summary-card"><span>كل الحسابات</span><strong>{{ backendProfiles.length }}</strong></div><div class="staff-summary-card"><span>عملاء</span><strong>{{ backendProfiles.filter(item=>item.role==='customer').length }}</strong></div><div class="staff-summary-card"><span>تسجيلات جديدة · 7 أيام</span><strong>{{ backendProfiles.filter(item=>item.role==='customer' && isNewProfile(item)).length }}</strong></div><div class="staff-summary-card"><span>أصحاب عقارات</span><strong>{{ backendProfiles.filter(item=>item.role==='owner').length }}</strong></div></div><article v-for="profile in backendProfiles" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }} <span v-if="profile.role==='customer' && isNewProfile(profile)" class="staff-status-pill">تسجيل جديد</span><span v-if="profile.role==='customer' && profile.requested_role==='owner'" class="staff-status-pill">طلب اعتماد مالك</span></strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.address_text || 'العنوان غير مسجل' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><button v-if="profile.role==='customer' && profile.requested_role==='owner'" class="primary-button" :disabled="roleUpdateBusyId===profile.id" @click="updateProfileRole(profile,'owner')">اعتماد كمالك</button><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="profile.id === sessionUser?.id || roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.length" class="empty-state">لا توجد حسابات للعرض أو أن حسابك ليس مدير النظام.</div><div class="policy-note">لا يمكن تغيير صلاحية مدير النظام الحالي من هنا، ولا يمكن إنشاء مدير جديد من التسجيل العام.</div></div>
 
           <div v-if="adminTab === 'staff'" class="admin-content staff-management">
             <div class="row-between staff-heading"><div><h3>إدارة فريق العمل والصلاحيات</h3><p class="muted">بطاقة مستقلة لكل موظف، والصلاحيات تتحدد لكل حساب على حدة.</p></div><button class="outline-light-button" @click="loadBackendProfiles">تحديث البيانات</button></div>
@@ -1570,10 +1570,12 @@ methods:{
   },
   async syncAuthSession(session){
     if(!session?.user){if(this.sessionUser?.isSupabaseUser)this.sessionUser=null;return;}
-    const user=session.user;let profile=null;
-    try{const {data,error}=await supabaseClient.from('profiles').select('full_name,phone,whatsapp_phone,role,staff_permissions').eq('id',user.id).maybeSingle();if(error)throw error;profile=data;}
-    catch(error){console.error('Could not load Samsar profile:',error);}
-    this.sessionUser={id:user.id,email:user.email||'',name:profile?.full_name||user.user_metadata?.full_name||user.email||'مستخدم سمسار',phone:profile?.phone||user.phone||'',role:profile?.role||'customer',staffPermissions:profile?.staff_permissions||{},isSupabaseUser:true};
+    const user=session.user;let profile=null;const metadata=user.user_metadata||{};
+    try{const {data,error}=await supabaseClient.from('profiles').select('full_name,phone,whatsapp_phone,address_text,requested_role,role,staff_permissions').eq('id',user.id).maybeSingle();if(error)throw error;profile=data;
+      const patch={};if(metadata.address_text&&!profile?.address_text)patch.address_text=metadata.address_text;if(metadata.requested_role==='owner'&&profile?.requested_role!=='owner')patch.requested_role='owner';
+      if(Object.keys(patch).length&&profile){const {error:updateError}=await supabaseClient.from('profiles').update(patch).eq('id',user.id);if(updateError)console.warn('Profile contact details could not be synced:',updateError);else profile={...profile,...patch};}
+    }catch(error){console.error('Could not load Samsar profile:',error);}
+    this.sessionUser={id:user.id,email:user.email||'',name:profile?.full_name||metadata.full_name||user.email||'مستخدم سمسار',phone:profile?.phone||user.phone||'',address:profile?.address_text||metadata.address_text||'',role:profile?.role||'customer',staffPermissions:profile?.staff_permissions||{},isSupabaseUser:true};
   },
   async loadBackendProperties(){
     if(!supabaseClient)return;
@@ -1732,7 +1734,7 @@ methods:{
   },
   async loadBackendProfiles(){
     if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){this.backendProfiles=[];return;}
-    const {data,error}=await supabaseClient.from('profiles').select('id,full_name,phone,whatsapp_phone,role,staff_permissions,created_at').order('created_at',{ascending:false});
+    const {data,error}=await supabaseClient.from('profiles').select('id,full_name,phone,whatsapp_phone,address_text,requested_role,role,staff_permissions,created_at').order('created_at',{ascending:false});
     if(error)throw error;this.backendProfiles=data||[];
   },
   async updateProfileRole(profile,newRole){
@@ -1740,7 +1742,7 @@ methods:{
     if(profile.id===this.sessionUser.id){this.toast('لا يمكن تغيير صلاحية حساب المدير الحالي من هذه الشاشة.');return;}
     if(!['customer','owner','staff'].includes(newRole)){this.toast('الصلاحية المطلوبة غير مسموح بها.');return;}
     this.roleUpdateBusyId=profile.id;
-    try{const defaults={inquiries:true,viewings:true,ai_assistant:true,listings_review:false,operations:false};const patch={role:newRole};if(newRole==='staff')patch.staff_permissions={...defaults,...(profile.staff_permissions||{})};else patch.staff_permissions={};const {error}=await supabaseClient.from('profiles').update(patch).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
+    try{const defaults={inquiries:false,viewings:true,ai_assistant:false,listings_review:true,operations:false};const patch={role:newRole};if(newRole==='staff')patch.staff_permissions={...defaults,...(profile.staff_permissions||{})};else patch.staff_permissions={};if(newRole==='owner')patch.requested_role='owner';const {error}=await supabaseClient.from('profiles').update(patch).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
     catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
     finally{this.roleUpdateBusyId='';}
   },
@@ -2023,16 +2025,18 @@ methods:{
     this.properties=this.properties.filter(p=>p.id!==property.id);this.persistDemo();this.toast('تم حذف الإعلان التجريبي محليًا.');
   },
   async changeListingStatus(id,status){
-    if(!['admin','staff'].includes(this.sessionUser?.role)){this.toast('لا توجد صلاحية لتعديل الحالة.');return;}
+    const isAdmin=this.sessionUser?.role==='admin',isStaff=this.sessionUser?.role==='staff';
+    if(!isAdmin&&!isStaff){this.toast('لا توجد صلاحية لتعديل الحالة.');return;}
     const p=this.getProperty(id);if(!p)return;
     if(p.isBackendRecord){
-      if(this.sessionUser?.role!=='admin'){this.toast('تغيير حالة إعلان حقيقي متاح لمدير النظام فقط.');return;}
+      if(isStaff&&!this.sessionUser?.staffPermissions?.listings_review&&!this.sessionUser?.staffPermissions?.operations){this.toast('تحتاج صلاحية متابعة الإعلانات من مدير النظام.');return;}
       const map={'منشور تجريبي':'published','منشور':'published','قيد المراجعة التجريبية':'pending_review','قيد المراجعة':'pending_review','مسودة':'draft','موقوف':'archived','مؤرشف':'archived','مرفوض':'rejected','مؤجر':'rented'};
       const allowedStatuses=['draft','pending_review','published','rejected','rented','archived'];
       const dbStatus=allowedStatuses.includes(status)?status:map[status];if(!dbStatus){this.toast('الحالة المطلوبة غير معروفة.');return;}
+      if(isStaff&&!['pending_review','rented','archived'].includes(dbStatus)){this.toast('الموظف يحدّث حالة المتابعة فقط؛ النشر والرفض النهائي من اختصاص الأدمن.');return;}
       const now=new Date().toISOString(),patch={status:dbStatus};
-      if(dbStatus==='published'){patch.published_at=p.publishedAt||now;patch.verified_at=p.verifiedAt||now;patch.rejection_reason=null;}
-      else if(dbStatus==='rejected')patch.rejection_reason='تم الرفض من الإدارة';
+      if(isAdmin&&dbStatus==='published'){patch.published_at=p.publishedAt||now;patch.verified_at=p.verifiedAt||now;patch.rejection_reason=null;}
+      else if(isAdmin&&dbStatus==='rejected')patch.rejection_reason='تم الرفض من الإدارة';
       try{const {error}=await supabaseClient.from('properties').update(patch).eq('id',p.id);if(error)throw error;await this.loadBackendProperties();this.toast('تم تحديث حالة الإعلان في قاعدة البيانات.');}
       catch(error){console.error(error);this.toast('تعذر تحديث الحالة؛ تأكد من صلاحيات الإدارة.');}return;
     }
