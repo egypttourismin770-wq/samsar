@@ -625,12 +625,7 @@ img{max-width:100%}
       <button class="icon-button" title="الإشعارات" @click="notificationsOpen = !notificationsOpen">
         ♧<sup v-if="myNotifications.length">{{ myNotifications.length }}</sup>
       </button>
-      <button class="login-button" @click="sessionUser?.role==='owner'?newListing():openEntryChooser">＋ إنشاء إعلان</button>
-      <button v-if="sessionUser && sessionUser.role === 'admin'" class="small-button" @click="navigateWorkspace('admin')">لوحة الإدارة</button>
-      <button v-else-if="sessionUser && sessionUser.role === 'staff'" class="small-button" @click="navigateWorkspace('staff')">مساحة الموظفين</button>
-      <button v-else-if="sessionUser && sessionUser.role === 'owner'" class="small-button" @click="scrollTo('owner-workspace')">لوحة صاحب العقار</button>
-      <button v-else-if="sessionUser && sessionUser.role === 'customer'" class="small-button" @click="scrollTo('my-viewings')">متابعة طلباتي</button>
-      <button v-else-if="!sessionUser" class="small-button" @click="openEntryChooser">العميل / متابعة الطلب</button>
+      <button class="login-button" @click="sessionUser?.role==='owner' ? newListing() : openEntryChooser()">＋ إنشاء إعلان</button>
     </div>
 
     <div v-if="notificationsOpen" class="notification-popover">
@@ -707,6 +702,7 @@ img{max-width:100%}
         </label>
         <button class="primary-button" @click="scrollTo('properties')">⌕ ابحث</button>
       </div>
+      <div class="property-code-lookup"><div><strong>معاك رقم عقار؟</strong><small>اكتب رقم العقار لعرض بياناته مباشرة.</small></div><form @submit.prevent="lookupPropertyByCode" class="property-code-form"><input v-model.trim="propertyCodeLookup" placeholder="مثال: 12 أو DEMO-01" aria-label="رقم العقار" /><button type="submit" class="primary-button">عرض العقار</button></form><p v-if="propertyLookupError" class="error-message">{{ propertyLookupError }}</p></div>
     </section>
 
     <!-- المميزات -->
@@ -762,6 +758,7 @@ img{max-width:100%}
           <div class="property-content">
             <div class="property-location">⌖ {{ property.area }} - {{ property.neighborhood }}</div>
             <button class="property-title" @click="openProperty(property)">{{ property.title }}</button>
+            <div class="property-code-label">رقم العقار: <strong>{{ propertyCode(property) }}</strong></div>
             <div class="rating-inline">
               <span class="stars">{{ starsText(property.rating) }}</span>
               <strong>{{ Number(property.rating || 0).toFixed(1) }}</strong>
@@ -1027,7 +1024,7 @@ img{max-width:100%}
   <div v-if="viewingOpen" class="overlay" @click.self="viewingOpen=false">
     <section class="modal viewing-modal">
       <div class="modal-heading"><div><span class="eyebrow">خطوة قبل زيارة العقار</span><h2>طلب معاينة</h2></div><button class="close-button" @click="viewingOpen=false">✕</button></div>
-      <div v-if="viewingProperty" class="viewing-summary"><img :src="viewingProperty.photos[0]?.src || viewingProperty.photos[0]" @error="onImageError" /><div><strong>{{ viewingProperty.title }}</strong><small>{{ viewingProperty.area }} — {{ viewingProperty.neighborhood }}</small><b>{{ money(viewingProperty.price) }}</b></div></div>
+      <div v-if="viewingProperty" class="viewing-summary"><img :src="viewingProperty.photos[0]?.src || viewingProperty.photos[0]" @error="onImageError" /><div><strong>{{ viewingProperty.title }}</strong><small>رقم العقار: {{ propertyCode(viewingProperty) }}</small><small>{{ viewingProperty.area }} — {{ viewingProperty.neighborhood }}</small><b>{{ money(viewingProperty.price) }}</b></div></div>
       <form @submit.prevent="submitViewing" class="login-form">
         <label>الاسم بالكامل *<input v-model.trim="viewingForm.customerName" required maxlength="100" /></label>
         <label>رقم الهاتف *<input v-model.trim="viewingForm.phone" type="tel" required maxlength="25" /></label>
@@ -1316,6 +1313,8 @@ data() {
     adminOpen:false,
     adminRouteMode:'',
     adminTab:'overview',
+    propertyCodeLookup:'',
+    propertyLookupError:'',
     entryChooserOpen:false,
     trackingOpen:false,
     customerOrderLookup:'',
@@ -1339,7 +1338,7 @@ data() {
       {id:'overview',label:'نظرة عامة',icon:'▦',roles:['admin','staff']},
       {id:'listings',label:'العقارات',icon:'⌂',roles:['admin','staff']},
       {id:'viewings',label:'طلبات المعاينة',icon:'▤',roles:['admin','staff']},
-      {id:'inquiries',label:'استفسارات العملاء',icon:'✉',roles:['admin']},
+      {id:'inquiries',label:'استفسارات العملاء',icon:'✉',roles:['admin','staff']},
       {id:'customers',label:'المستخدمون',icon:'♙',roles:['admin']},
       {id:'staff',label:'فريق العمل',icon:'♧',roles:['admin']},
       {id:'assistant',label:'مساعد الموظفين',icon:'✧',roles:['admin']},
@@ -1376,7 +1375,7 @@ computed:{
   filteredProperties(){
     const term=(this.filters.query||'').toLocaleLowerCase('ar');
     return this.properties.filter(p=>{
-      const text=[p.title,p.area,p.neighborhood,p.type,p.transaction,p.description,p.id].join(' ').toLocaleLowerCase('ar');
+      const text=[p.title,p.area,p.neighborhood,p.type,p.transaction,p.description,p.id,this.propertyCode(p)].join(' ').toLocaleLowerCase('ar');
       const matches=!term||text.includes(term);
       const transaction=this.filters.transaction==='الكل'||p.transaction===this.filters.transaction;
       const type=this.filters.type==='الكل'||p.type===this.filters.type;
@@ -1503,6 +1502,8 @@ methods:{
     return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',addressText:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:'',isDemo:false};
   },
   emptyViewingForm(){return {customerName:'',phone:'',date:'',time:'16:00',note:''};},
+  propertyCode(property){if(!property)return '';if(property.listingCode!==undefined&&property.listingCode!==null&&String(property.listingCode).trim())return String(property.listingCode);if(property.isBackendRecord)return String(property.id||'').slice(0,8).toUpperCase();const digits=String(property.id||'').replace(/\D/g,'');return 'DEMO-'+digits.padStart(2,'0');},
+  lookupPropertyByCode(){const code=String(this.propertyCodeLookup||'').trim().toLocaleUpperCase('en');if(!code){this.propertyLookupError='اكتب رقم العقار أولًا.';return;}const property=this.properties.find(p=>this.propertyCode(p).toLocaleUpperCase('en')===code||String(p.title||'').trim().toLocaleUpperCase('ar')===code);if(!property){this.propertyLookupError='مش لاقيين عقار بالرقم ده. راجع الرقم الظاهر على بطاقة العقار.';return;}this.propertyLookupError='';this.openProperty(property);this.scrollTo('properties');},
   money(value){
     return new Intl.NumberFormat('ar-EG',{style:'currency',currency:'EGP',maximumFractionDigits:0}).format(Number(value)||0);
   },
@@ -1938,7 +1939,7 @@ methods:{
     if(this.sessionUser.role!=='customer'){this.toast('طلب المعاينة متاح لحساب العميل.');return;}
     this.openViewingModal(property);
   },
-  openViewingModal(property){this.viewingPropertyId=property.id;this.viewingForm=this.emptyViewingForm();this.viewingForm.customerName=this.sessionUser?.name||'';this.viewingOpen=true;this.selectedProperty=null;},
+  openViewingModal(property){this.viewingPropertyId=property.id;this.viewingForm=this.emptyViewingForm();this.viewingForm.customerName=this.sessionUser?.name||'';this.viewingForm.phone=this.sessionUser?.phone||'';this.viewingOpen=true;this.selectedProperty=null;},
   async submitViewing(){
     if(this.sessionUser?.role!=='customer'||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب عميل حقيقي لإرسال الطلب.');return;}
     const property=this.viewingProperty,form=this.viewingForm;
