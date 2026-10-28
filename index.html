@@ -1056,6 +1056,53 @@ img{max-width:100%}
 </div>
 </script>
 
+<script id="samsar-runtime-diagnostic">
+(function () {
+  function showSamsarRuntimeError(message) {
+    var existing = document.getElementById('samsar-runtime-diagnostic-panel');
+    if (existing) return;
+    var panel = document.createElement('section');
+    panel.id = 'samsar-runtime-diagnostic-panel';
+    panel.setAttribute('dir', 'rtl');
+    panel.style.cssText = 'position:fixed;z-index:999999;inset:16px;overflow:auto;padding:24px;border:2px solid #b45309;border-radius:16px;background:#fffaf0;color:#352b20;font:16px/1.8 Arial,sans-serif;box-shadow:0 12px 40px #0003';
+    var title = document.createElement('h2');
+    title.textContent = 'تعذّر تشغيل موقع سمسار';
+    title.style.cssText = 'margin:0 0 10px;color:#9a3412;font-size:24px';
+    var explanation = document.createElement('p');
+    explanation.textContent = 'الموقع وصل إلى المتصفح، لكن حدث خطأ أثناء تشغيل JavaScript. احتفظ برسالة الخطأ التالية لإصلاح السبب بدقة:';
+    var details = document.createElement('pre');
+    details.textContent = String(message || 'خطأ غير محدد').slice(0, 3000);
+    details.style.cssText = 'direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;border-radius:8px;background:#fff;color:#7f1d1d;border:1px solid #fed7aa;font:13px/1.5 monospace';
+    var note = document.createElement('p');
+    note.textContent = 'هذه رسالة تشخيص مؤقتة؛ لا تُدخل أي كلمات مرور أو بيانات خاصة في هذه الصفحة.';
+    panel.appendChild(title);
+    panel.appendChild(explanation);
+    panel.appendChild(details);
+    panel.appendChild(note);
+    document.body.appendChild(panel);
+  }
+  window.addEventListener('error', function (event) {
+    var target = event.target;
+    if (target && target.tagName === 'SCRIPT') {
+      showSamsarRuntimeError('تعذّر تحميل ملف JavaScript: ' + (target.src || 'ملف داخلي'));
+      return;
+    }
+    showSamsarRuntimeError((event.message || 'JavaScript error') + (event.filename ? '\\n' + event.filename + ':' + event.lineno + ':' + event.colno : ''));
+  }, true);
+  window.addEventListener('unhandledrejection', function (event) {
+    var reason = event.reason;
+    showSamsarRuntimeError('Unhandled promise rejection: ' + (reason && (reason.stack || reason.message) ? (reason.stack || reason.message) : String(reason)));
+  });
+  window.setTimeout(function () {
+    if (!window.Vue) showSamsarRuntimeError('لم يتم تحميل Vue من CDN. تحقق من اتصال الشبكة أو حظر مكتبة Vue: https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js');
+    else {
+      var app = document.getElementById('app');
+      if (app && !app.children.length && !app.textContent.trim()) showSamsarRuntimeError('تم تحميل Vue، لكن واجهة التطبيق لم تظهر خلال 8 ثوانٍ. افتح Console لمعرفة تفاصيل الخطأ.');
+    }
+  }, 8000);
+})();
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script>
