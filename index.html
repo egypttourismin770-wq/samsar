@@ -907,9 +907,9 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'viewings'" class="admin-content"><h3>طلبات المعاينة</h3><article v-for="request in viewings" :key="request.id" class="admin-record"><div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div><p>العميل: {{ request.customerName }} · {{ request.phone }}</p><p>الموعد: {{ request.date }} — {{ request.time }}</p><div class="inline-actions"><select :value="request.status" @change="updateViewingStatus(request,$event.target.value)"><option>بانتظار موافقة المالك</option><option>تمت الموافقة من المالك</option><option>موعد بديل مقترح</option><option>تم قبول الموعد البديل</option><option>مرفوضة من المالك</option><option>ملغاة من العميل</option><option>اكتملت المعاينة</option></select></div></article><p v-if="!viewings.length" class="muted">لا توجد طلبات معاينة.</p></div>
 
-          <div v-if="adminTab === 'customers'" class="admin-content"><h3>العملاء التجريبيون</h3><article v-for="account in demoAccounts.filter(a => a.role === 'customer')" :key="account.email" class="admin-list-item"><span class="avatar">{{ account.name.slice(0,1) }}</span><div class="admin-list-main"><strong>{{ account.name }}</strong><small>{{ account.email }}</small><small>حساب عرض تجريبي</small></div></article></div>
+          <div v-if="adminTab === 'customers'" class="admin-content"><h3>المستخدمون والصلاحيات</h3><p class="muted">الحسابات الحقيقية في قاعدة البيانات. الحساب الجديد يبدأ كعميل.</p><article v-for="profile in backendProfiles" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="profile.id === sessionUser?.id || roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.length" class="empty-state">لا توجد حسابات للعرض أو أن حسابك ليس مدير النظام.</div><div class="policy-note">لا يمكن تغيير صلاحية مدير النظام الحالي من هنا، ولا يمكن إنشاء مدير جديد من التسجيل العام.</div></div>
 
-          <div v-if="adminTab === 'staff'" class="admin-content"><h3>الموظفون والصلاحيات</h3><article v-for="account in demoAccounts.filter(a => ['admin','staff','owner'].includes(a.role))" :key="account.email" class="admin-list-item"><span class="avatar">{{ account.name.slice(0,1) }}</span><div class="admin-list-main"><strong>{{ account.name }}</strong><small>{{ account.email }}</small><small>{{ account.label }} — صلاحيات توضيحية فقط</small></div></article><div class="policy-note">تسجيل الدخول الحالي تجريبي. يجب تطبيق المصادقة والصلاحيات على خادم قبل نشر الموقع للاستخدام الحقيقي.</div></div>
+          <div v-if="adminTab === 'staff'" class="admin-content"><h3>الموظفون والمالكون</h3><article v-for="profile in backendProfiles.filter(item => ['owner','staff'].includes(item.role))" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.some(item => ['owner','staff'].includes(item.role))" class="empty-state">لا توجد حسابات مالك أو موظف حتى الآن. يمكنك تعيين دور من تبويب المستخدمين.</div><div class="policy-note">تغيير الصلاحية الحقيقي يُحفظ في قاعدة بيانات سمسار ولا يضيف أي صلاحية مدير.</div></div>
 
           <div v-if="adminTab === 'assistant'" class="admin-content"><h3>مساعد الموظفين</h3><p class="muted">مساعد محلي تجريبي لتنظيم متابعة العقارات وطلبات المعاينة.</p><form class="assistant-input" @submit.prevent="askStaffAssistant"><input v-model.trim="staffAssistantInput" placeholder="اكتب سؤالًا عن الطلبات أو الإعلانات..." maxlength="300" /><button type="submit">اسأل</button></form><div v-if="staffAssistantReply" class="assistant-reply">{{ staffAssistantReply }}</div></div>
 
@@ -983,6 +983,8 @@ data() {
     backendError:'',
     dataMode:'demo',
     authSubscription:null,
+    backendProfiles:[],
+    roleUpdateBusyId:'',
     selectedProperty:null,
     viewingOpen:false,
     viewingPropertyId:'',
@@ -1158,9 +1160,10 @@ methods:{
       if(session)await this.syncAuthSession(session);
       await this.loadBackendProperties();
       await this.loadBackendViewings();
+      await this.loadBackendProfiles();
       const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
         setTimeout(async()=>{
-          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadBackendViewings();}
+          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();}
           catch(error){console.error('Samsar auth refresh failed:',error);this.backendError='تعذر تحديث بيانات الحساب من قاعدة البيانات.';}
         },0);
       });
@@ -1210,7 +1213,21 @@ methods:{
       customerName:row.customer_name||'',phone:row.customer_phone||'',date:scheduled.date,time:scheduled.time,note:row.customer_note||'',ownerNote:row.owner_note||'',
       alternateDate:alternate.date,alternateTime:alternate.time,ownerProposedScheduledAt:row.owner_proposed_scheduled_at||'',status:states[row.status]||row.status,backendStatus:row.status,isBackendRecord:true,createdAt:new Date(row.created_at).getTime()||0};});
   },
-  getProperty(id){return this.properties.find(p=>p.id===id);},
+  async loadBackendProfiles(){
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){this.backendProfiles=[];return;}
+    const {data,error}=await supabaseClient.from('profiles').select('id,full_name,phone,whatsapp_phone,role,created_at').order('created_at',{ascending:false});
+    if(error)throw error;this.backendProfiles=data||[];
+  },
+  async updateProfileRole(profile,newRole){
+    if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser){this.toast('إدارة الصلاحيات متاحة لمدير النظام فقط.');return;}
+    if(profile.id===this.sessionUser.id){this.toast('لا يمكن تغيير صلاحية حساب المدير الحالي من هذه الشاشة.');return;}
+    if(!['customer','owner','staff'].includes(newRole)){this.toast('الصلاحية المطلوبة غير مسموح بها.');return;}
+    this.roleUpdateBusyId=profile.id;
+    try{const {error}=await supabaseClient.from('profiles').update({role:newRole}).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
+    catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
+    finally{this.roleUpdateBusyId='';}
+  },
+  getProperty(id){  getProperty(id){return this.properties.find(p=>p.id===id);},
   openProperty(property){this.selectedProperty=property;},
   toggleFavorite(id){
     const p=this.getProperty(id);
@@ -1240,11 +1257,11 @@ methods:{
       if(this.authMode==='signup'){
         if(this.signupName.trim().length<2){this.loginError='اكتب اسمك بالكامل.';return;}
         const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim()}}});if(error)throw error;
-        if(data.session){await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();this.loginOpen=false;this.toast('تم إنشاء الحساب. حسابك يبدأ كعميل.');}
+        if(data.session){await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast('تم إنشاء الحساب. حسابك يبدأ كعميل.');}
         else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
       }else{
         const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
-        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();this.loginOpen=false;this.toast('تم تسجيل الدخول بنجاح.');
+        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast('تم تسجيل الدخول بنجاح.');
         if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
         else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
       }
@@ -1254,7 +1271,7 @@ methods:{
   async logout(){
     const wasBackendUser=!!this.sessionUser?.isSupabaseUser;
     if(wasBackendUser&&supabaseClient){const {error}=await supabaseClient.auth.signOut();if(error){this.toast('تعذر تسجيل الخروج من الخادم.');return;}}
-    this.sessionUser=null;this.adminOpen=false;this.loginOpen=false;this.listingFormOpen=false;this.selectedProperty=null;this.viewingOpen=false;
+    this.sessionUser=null;this.backendProfiles=[];this.adminOpen=false;this.loginOpen=false;this.listingFormOpen=false;this.selectedProperty=null;this.viewingOpen=false;
     if(wasBackendUser&&supabaseClient){try{await this.loadBackendProperties();this.viewings=[];}catch(error){console.error(error);}}
     this.toast('تم تسجيل الخروج.');
   },
