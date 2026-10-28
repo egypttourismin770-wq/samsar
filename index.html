@@ -1214,9 +1214,11 @@ methods:{
       await this.loadBackendViewings();
       await this.loadBackendInquiries();
       await this.loadBackendProfiles();
+      if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();
+      await this.loadAvailablePaymentMethods();
       const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
         setTimeout(async()=>{
-          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadPublicSettings();await this.loadBackendViewings();await this.loadBackendInquiries();await this.loadBackendProfiles();this.handleDashboardDeepLink();}
+          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadPublicSettings();await this.loadBackendViewings();await this.loadBackendInquiries();await this.loadBackendProfiles();if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();await this.loadAvailablePaymentMethods();this.handleDashboardDeepLink();}
           catch(error){console.error('Samsar auth refresh failed:',error);this.backendError='تعذر تحديث بيانات الحساب من قاعدة البيانات.';}
         },0);
       });
