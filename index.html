@@ -1205,6 +1205,7 @@ methods:{
       await this.loadBackendProperties();
       await this.loadPublicSettings();
       await this.loadBackendViewings();
+      await this.loadBackendInquiries();
       await this.loadBackendProfiles();
       const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
         setTimeout(async()=>{
