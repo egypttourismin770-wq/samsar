@@ -512,6 +512,7 @@ img{max-width:100%}
   </header>
 
   <main>
+    <section v-if="backendError" class="section" style="padding-top:10px;padding-bottom:0"><div class="demo-banner">{{ backendError }}</div></section>
     <!-- الواجهة الرئيسية -->
     <section id="home" class="hero">
       <div class="hero-bg"></div>
@@ -1184,7 +1185,7 @@ methods:{
     this.backendError='';
   },
   mapBackendProperty(row){
-    const typeNames={apartment:'شقة',villa:'فيلا',studio:'ستوديو',room:'غرفة',duplex:'دوبلكس',penthouse:'بنتهاوس',chalet:'شاليه',commercial:'تجاري',other:'أخرى'};
+    const typeNames={apartment:'شقة',villa:'فيلا',studio:'استوديو',room:'غرفة',duplex:'دوبلكس',penthouse:'بنتهاوس',chalet:'شاليه',commercial:'محل تجاري',other:'أخرى'};
     const statusNames={draft:'مسودة',pending_review:'قيد المراجعة',published:'منشور',rejected:'مرفوض',rented:'مؤجر',archived:'مؤرشف'};
     const images=(row.property_images||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(item=>{
       const {data}=supabaseClient.storage.from('property-images').getPublicUrl(item.storage_path);
@@ -1362,7 +1363,7 @@ methods:{
     if(f.mapUrl&&!this.isValidUrl(f.mapUrl)){this.toast('رابط الخريطة غير صحيح.');return;}
     if(f.previewImages.length>10){this.toast('الحد الأقصى 10 صور.');return;}
     const old=this.editingListingId?this.getProperty(this.editingListingId):null;
-    const typeToDb={'شقة':'apartment','فيلا':'villa','ستوديو':'studio','غرفة':'room','دوبلكس':'duplex','بنتهاوس':'penthouse','شاليه':'chalet','تجاري':'commercial','أخرى':'other'};
+    const typeToDb={'شقة':'apartment','فيلا':'villa','استوديو':'studio','غرفة':'room','دوبلكس':'duplex','بنتهاوس':'penthouse','شاليه':'chalet','محل تجاري':'commercial','أخرى':'other'};
     const listingType=f.transaction==='إيجار'?'rent':'sale';
     const payload={title:f.title,description:f.description,property_type:typeToDb[f.type]||'other',listing_type:listingType,
       monthly_rent_egp:listingType==='rent'?Number(f.price):null,sale_price_egp:listingType==='sale'?Number(f.price):null,
