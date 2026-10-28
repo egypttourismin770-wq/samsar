@@ -1227,7 +1227,7 @@ methods:{
     catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
     finally{this.roleUpdateBusyId='';}
   },
-  getProperty(id){  getProperty(id){return this.properties.find(p=>p.id===id);},
+  getProperty(id){return this.properties.find(p=>p.id===id);},
   openProperty(property){this.selectedProperty=property;},
   toggleFavorite(id){
     const p=this.getProperty(id);
