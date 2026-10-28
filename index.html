@@ -109,6 +109,14 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .property-badge,.featured-badge,.photo-count{position:absolute;z-index:2;padding:5px 8px;border-radius:6px;font-size:9px;font-weight:900}
 .property-badge{top:10px;right:10px;color:#14665b;background:#e7f8ed}
 .sale-badge{color:#8d5b26;background:#fff0d2}
+.demo-property-badge{position:absolute;top:12px;right:12px;border-radius:999px;padding:5px 9px;background:#fff4d7;color:#77531a;border:1px solid #ead4a0;font-size:9px;font-weight:900;box-shadow:0 3px 12px #2222}
+.inquiry-card{padding:16px;border:1px solid #e3e9dd;border-radius:14px;background:#fff;display:grid;gap:10px}
+.inquiry-card h4{margin:0;color:var(--primary);font-size:14px}
+.inquiry-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:#7a8b80;font-size:10px}
+.inquiry-message{padding:12px;border-radius:10px;background:#f6f8f2;color:#304d43;font-size:12px;line-height:1.9;white-space:pre-wrap}
+.inquiry-response{padding:12px;border:1px solid #cde5d8;border-radius:10px;background:#f0faf4;color:#165f3d;font-size:12px;line-height:1.9;white-space:pre-wrap}
+.demo-info{padding:9px 12px;border-radius:9px;background:#fff5dd;color:#79551e;font-size:10px;line-height:1.8}
+.staff-inquiry-grid{display:grid;gap:12px}
 .featured-badge{top:10px;left:10px;color:#8d6a2c;background:#fff3d4}
 .photo-count{right:9px;bottom:9px;color:white;background:#143f3acb}
 .favorite-button{position:absolute;top:9px;left:9px;z-index:3;display:grid;place-items:center;width:30px;height:30px;border:1px solid #ffffffa6;border-radius:50%;color:#fff;background:#173f3e8a;font-size:18px}
@@ -622,7 +630,8 @@ img{max-width:100%}
           <div class="property-photo" @click="openProperty(property)">
             <img :src="property.photos[0] || fallbackImage" :alt="property.title" @error="onImageError" />
             <span class="property-badge" :class="property.transaction === 'بيع' ? 'sale-badge' : 'rent-badge'">{{ property.transaction }}</span>
-            <span v-if="property.featured" class="featured-badge">مميز</span>
+            <span v-if="property.featured && !property.isDemo" class="featured-badge">مميز</span>
+            <span v-if="property.isDemo" class="demo-property-badge">عرض تجريبي</span>
             <button class="favorite-button" :class="{favorited: favorites.includes(property.id)}" @click.stop="toggleFavorite(property.id)" :aria-label="'المفضلة ' + property.title">
               {{ favorites.includes(property.id) ? '♥' : '♡' }}
             </button>
@@ -961,7 +970,7 @@ return [
 }
 
 function defaultSettings() {
-return {name:'سمسار',tagline:'منصتك لاكتشاف العقارات المناسبة وتنظيم طلبات المعاينة بسهولة.',primaryColor:'#075c59',accentColor:'#12a69a',backgroundColor:'#faf7ef',whatsappPhone:''};
+return {name:'سمسار',tagline:'منصتك لاكتشاف العقارات المناسبة وتنظيم طلبات المعاينة بسهولة.',primaryColor:'#075c59',accentColor:'#12a69a',backgroundColor:'#faf7ef',whatsappPhone:'',facebookUrl:'',officialWebsiteUrl:'https://egypttourismin770-wq.github.io/samsar/',qrTargetUrl:'https://egypttourismin770-wq.github.io/samsar/'};
 }
 
 const SamsarApp = {
@@ -976,6 +985,15 @@ data() {
     favorites:[],
     userRatings:{},
     settings:defaultSettings(),
+    aiSettings:{enabled:false,provider:'openai-compatible',base_url:'',model:''},
+    siteContactSettings:{facebook_url:'',official_website_url:'https://egypttourismin770-wq.github.io/samsar/',qr_target_url:'https://egypttourismin770-wq.github.io/samsar/'},
+    inquiries:[], inquiryOpen:false, inquiryPropertyId:'', inquiryQuestion:'', inquiryBusy:false,
+    pendingInquiryPropertyId:'', inquiryDrafts:{}, ownerInquiryDrafts:{}, inquiryOwnerResponses:{},
+    assistantPropertyId:'', assistantConversationId:'', assistantBusy:false,
+    paymentMethods:[], paymentTransactions:[], availablePaymentMethods:[], listingPaymentOpen:false,
+    pendingPaymentPropertyId:'', selectedPaymentMethodId:'', paymentPayerReference:'', paymentReceiptFile:null,
+    paymentReceiptName:'', paymentBusy:false, paymentConfigLoading:false,
+    paymentPolicy:{owner_listing_fee_egp:50,customer_service_fee_egp:200,refund_customer_percent:75,refund_support_percent:25},
     filters:{query:'',transaction:'الكل',type:'الكل',area:'الكل',sort:'featured'},
     showFavorites:false,
     sessionUser:null,
@@ -1019,11 +1037,13 @@ data() {
       {id:'overview',label:'نظرة عامة',icon:'▦',roles:['admin','staff']},
       {id:'listings',label:'العقارات',icon:'⌂',roles:['admin','staff']},
       {id:'viewings',label:'طلبات المعاينة',icon:'▤',roles:['admin','staff']},
+      {id:'inquiries',label:'استفسارات العملاء',icon:'✉',roles:['admin','staff']},
       {id:'customers',label:'المستخدمون',icon:'♙',roles:['admin']},
       {id:'staff',label:'فريق العمل',icon:'♧',roles:['admin']},
       {id:'assistant',label:'مساعد الموظفين',icon:'✧',roles:['admin','staff']},
       {id:'refunds',label:'الاستردادات',icon:'↻',roles:['admin']},
       {id:'finance',label:'التقارير المالية',icon:'▥',roles:['admin']},
+      {id:'payments',label:'الدفع ورسوم الإعلانات',icon:'▣',roles:['admin']},
       {id:'settings',label:'الإعدادات',icon:'⚙',roles:['admin']}
     ]
   };
@@ -1073,6 +1093,10 @@ computed:{
   customerViewings(){
     return this.sessionUser?this.viewings.filter(v=>v.customerEmail===this.sessionUser.email).sort((a,b)=>b.createdAt-a.createdAt):[];
   },
+  customerInquiries(){return this.inquiries.filter(i=>i.customerId===this.sessionUser?.id).sort((a,b)=>b.createdAt-a.createdAt);},
+  ownerInquiries(){return this.inquiries.filter(i=>i.ownerId===this.sessionUser?.id).sort((a,b)=>b.createdAt-a.createdAt);},
+  staffInquiries(){return this.inquiries.slice().sort((a,b)=>b.createdAt-a.createdAt);},
+  get inquiryProperty(){return this.getProperty(this.inquiryPropertyId);},
   viewingProperty(){return this.getProperty(this.viewingPropertyId);},
   visibleAdminTabs(){return this.adminTabs.filter(t=>t.roles.includes(this.sessionUser?.role));},
   favoriteProperties(){return this.properties.filter(p=>this.favorites.includes(p.id));},
@@ -1209,16 +1233,17 @@ methods:{
     const typeNames={apartment:'شقة',villa:'فيلا',studio:'استوديو',room:'غرفة',duplex:'دوبلكس',penthouse:'بنتهاوس',chalet:'شاليه',commercial:'محل تجاري',other:'أخرى'};
     const statusNames={draft:'مسودة',pending_review:'قيد المراجعة',published:'منشور',rejected:'مرفوض',rented:'مؤجر',archived:'مؤرشف'};
     const images=(row.property_images||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(item=>{
-      const {data}=supabaseClient.storage.from('property-images').getPublicUrl(item.storage_path);
-      return {key:item.id,src:data.publicUrl,storagePath:item.storage_path,altText:item.alt_text||'',isCover:!!item.is_cover};
+      const source=String(item.storage_path||'');
+      const src=/^https:\/\//i.test(source)?source:supabaseClient.storage.from('property-images').getPublicUrl(source).data.publicUrl;
+      return {key:item.id,src,storagePath:/^https:\/\//i.test(source)?'':source,altText:item.alt_text||'',isCover:!!item.is_cover};
     });
     const amenities=(row.property_amenities||[]).map(item=>item.amenity_name).filter(Boolean);
-    return {id:row.id,listingCode:row.listing_code,isBackendRecord:true,isDemo:false,ownerId:row.owner_id,
+    return {id:row.id,listingCode:row.listing_code,isBackendRecord:true,isDemo:!!row.is_demo,ownerId:row.owner_id,ownerFeeStatus:row.owner_fee_status,
       title:row.title,description:row.description||'',transaction:row.listing_type==='rent'?'إيجار':'بيع',type:typeNames[row.property_type]||'أخرى',
       price:Number(row.listing_type==='rent'?row.monthly_rent_egp:row.sale_price_egp)||0,suggestedPrice:Number(row.suggested_price_egp)||0,
       area:row.governorate||row.city||'',neighborhood:row.district||'',size:Number(row.area_sqm)||0,bedrooms:Number(row.bedrooms)||0,bathrooms:Number(row.bathrooms)||0,
       contractDetails:row.contract_details||'',mapUrl:row.map_url||'',amenities,photos:images,ownerEmail:row.owner_id===this.sessionUser?.id?this.sessionUser?.email||'':'',
-      ownerName:row.owner?.full_name||(row.owner_id===this.sessionUser?.id?this.sessionUser?.name:'')||'مالك العقار',featured:false,status:statusNames[row.status]||row.status,backendStatus:row.status,
+      ownerName:row.is_demo?'إعلان تجريبي':(row.owner?.full_name||(row.owner_id===this.sessionUser?.id?this.sessionUser?.name:'')||'مالك العقار'),featured:false,status:statusNames[row.status]||row.status,backendStatus:row.status,
       rating:0,reviews:0,identityDocName:'',ownershipDocName:'',createdAt:row.created_at,publishedAt:row.published_at,verifiedAt:row.verified_at};
   },
   async loadBackendViewings(){
