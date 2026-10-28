@@ -1309,7 +1309,7 @@ methods:{
       title:sanitizePublicPropertyText(row.title),description:sanitizePublicPropertyText(row.description||''),transaction:row.listing_type==='rent'?'إيجار':'بيع',type:typeNames[row.property_type]||'أخرى',
       price:Number(row.listing_type==='rent'?row.monthly_rent_egp:row.sale_price_egp)||0,suggestedPrice:Number(row.suggested_price_egp)||0,
       area:row.governorate||row.city||'',neighborhood:row.district||'',size:Number(row.area_sqm)||0,bedrooms:Number(row.bedrooms)||0,bathrooms:Number(row.bathrooms)||0,
-      contractDetails:row.contract_details||'',mapUrl:row.map_url||'',amenities,photos:images,ownerEmail:row.owner_id===this.sessionUser?.id?this.sessionUser?.email||'':'',
+      contractDetails:sanitizePublicPropertyText(row.contract_details||''),mapUrl:row.map_url||'',amenities,photos:images,ownerEmail:row.owner_id===this.sessionUser?.id?this.sessionUser?.email||'':'',
       ownerName:row.is_demo?'إعلان تجريبي':(row.owner?.full_name||(row.owner_id===this.sessionUser?.id?this.sessionUser?.name:'')||'مالك العقار'),featured:false,status:statusNames[row.status]||row.status,backendStatus:row.status,
       rating:0,reviews:0,identityDocName:'',ownershipDocName:'',createdAt:row.created_at,publishedAt:row.published_at,verifiedAt:row.verified_at};
   },
