@@ -904,7 +904,7 @@ img{max-width:100%}
             </div>
           </div>
 
-          <div v-if="adminTab === 'listings'" class="admin-content"><h3>إدارة العقارات</h3><article v-for="property in properties" :key="property.id" class="admin-list-item"><img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" /><div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }}</small></div><select :value="property.status" @change="changeListingStatus(property.id,$event.target.value)"><option>منشور تجريبي</option><option>قيد المراجعة التجريبية</option><option>موقوف</option></select><button class="outline-light-button" @click="openProperty(property)">عرض</button></article></div>
+          <div v-if="adminTab === 'listings'" class="admin-content"><h3>إدارة العقارات</h3><article v-for="property in properties" :key="property.id" class="admin-list-item"><img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" /><div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }}</small></div><select :value="property.isBackendRecord ? property.backendStatus : property.status" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published">منشور</option><option value="rejected">مرفوض</option><option value="rented">مؤجر</option><option value="archived">مؤرشف</option></select><button class="outline-light-button" @click="openProperty(property)">عرض</button></article></div>
 
           <div v-if="adminTab === 'viewings'" class="admin-content"><h3>طلبات المعاينة</h3><article v-for="request in viewings" :key="request.id" class="admin-record"><div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div><p>العميل: {{ request.customerName }} · {{ request.phone }}</p><p>الموعد: {{ request.date }} — {{ request.time }}</p><div class="inline-actions"><select :value="request.status" @change="updateViewingStatus(request,$event.target.value)"><option>بانتظار موافقة المالك</option><option>تمت الموافقة من المالك</option><option disabled>موعد بديل مقترح</option><option disabled>تم قبول الموعد البديل</option><option>مرفوضة من المالك</option><option>ملغاة من العميل</option><option>اكتملت المعاينة</option></select></div></article><p v-if="!viewings.length" class="muted">لا توجد طلبات معاينة.</p></div>
 
@@ -1165,12 +1165,19 @@ methods:{
       await this.loadBackendProfiles();
       const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
         setTimeout(async()=>{
-          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();}
+          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.handleDashboardDeepLink();}
           catch(error){console.error('Samsar auth refresh failed:',error);this.backendError='تعذر تحديث بيانات الحساب من قاعدة البيانات.';}
         },0);
       });
       this.authSubscription=subscription;this.backendReady=true;this.backendError='';
+      this.handleDashboardDeepLink();
     }catch(error){console.error('Samsar backend initialization failed:',error);this.backendError='تعذر الاتصال بقاعدة البيانات حاليًا؛ البيانات الظاهرة قد تكون تجريبية.';}
+  },
+  handleDashboardDeepLink(){
+    if(!new URLSearchParams(window.location.search).has('dashboard'))return;
+    if(!this.sessionUser){this.openLogin();return;}
+    if(['admin','staff'].includes(this.sessionUser.role)){this.adminOpen=true;this.adminTab='overview';}
+    else this.toast('لوحة الإدارة متاحة لحساب الإدارة أو الموظف المعتمد فقط.');
   },
   async syncAuthSession(session){
     if(!session?.user){if(this.sessionUser?.isSupabaseUser)this.sessionUser=null;return;}
@@ -1181,7 +1188,10 @@ methods:{
   },
   async loadBackendProperties(){
     if(!supabaseClient)return;
-    const {data,error}=await supabaseClient.from('properties').select('*, property_images(*), property_amenities(*), owner:profiles!properties_owner_id_fkey(full_name)').order('created_at',{ascending:false});
+    const selection=this.sessionUser?.isSupabaseUser
+      ? '*, property_images(*), property_amenities(*), owner:profiles!properties_owner_id_fkey(full_name)'
+      : '*, property_images(*), property_amenities(*)';
+    const {data,error}=await supabaseClient.from('properties').select(selection).order('created_at',{ascending:false});
     if(error)throw error;
     const rows=Array.isArray(data)?data:[];
     if(rows.length){this.properties=rows.map(row=>this.mapBackendProperty(row));this.dataMode='live';}
@@ -1263,7 +1273,7 @@ methods:{
         else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
       }else{
         const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
-        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast('تم تسجيل الدخول بنجاح.');
+        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');
         if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
         else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
       }
@@ -1425,7 +1435,8 @@ methods:{
     if(p.isBackendRecord){
       if(this.sessionUser?.role!=='admin'){this.toast('تغيير حالة إعلان حقيقي متاح لمدير النظام فقط.');return;}
       const map={'منشور تجريبي':'published','منشور':'published','قيد المراجعة التجريبية':'pending_review','قيد المراجعة':'pending_review','مسودة':'draft','موقوف':'archived','مؤرشف':'archived','مرفوض':'rejected','مؤجر':'rented'};
-      const dbStatus=map[status];if(!dbStatus){this.toast('الحالة المطلوبة غير معروفة.');return;}
+      const allowedStatuses=['draft','pending_review','published','rejected','rented','archived'];
+      const dbStatus=allowedStatuses.includes(status)?status:map[status];if(!dbStatus){this.toast('الحالة المطلوبة غير معروفة.');return;}
       const now=new Date().toISOString(),patch={status:dbStatus};
       if(dbStatus==='published'){patch.published_at=p.publishedAt||now;patch.verified_at=p.verifiedAt||now;patch.rejection_reason=null;}
       else if(dbStatus==='rejected')patch.rejection_reason='تم الرفض من الإدارة';
