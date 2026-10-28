@@ -1502,7 +1502,7 @@ methods:{
     if(profile.id===this.sessionUser.id){this.toast('لا يمكن تغيير صلاحية حساب المدير الحالي من هذه الشاشة.');return;}
     if(!['customer','owner','staff'].includes(newRole)){this.toast('الصلاحية المطلوبة غير مسموح بها.');return;}
     this.roleUpdateBusyId=profile.id;
-    try{const defaults={inquiries:true,viewings:true,ai_assistant:true,listings_review:false,operations:false};const patch={role:newRole};if(newRole==='staff')patch.staff_permissions=profile.staff_permissions||defaults;else patch.staff_permissions={};const {error}=await supabaseClient.from('profiles').update(patch).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
+    try{const defaults={inquiries:true,viewings:true,ai_assistant:true,listings_review:false,operations:false};const patch={role:newRole};if(newRole==='staff')patch.staff_permissions={...defaults,...(profile.staff_permissions||{})};else patch.staff_permissions={};const {error}=await supabaseClient.from('profiles').update(patch).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
     catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
     finally{this.roleUpdateBusyId='';}
   },
