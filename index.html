@@ -1318,7 +1318,7 @@ methods:{
     const row=this.viewings.find(v=>v.id===request.id);if(!row)return;row.alternateDate=this.alternateDate;row.alternateTime=this.alternateTime;row.status='موعد بديل مقترح';this.alternateFormId='';this.persistDemo();this.toast('تم تسجيل الموعد البديل محليًا فقط.');
   },
   newListing(){
-    if(this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك التجريبي.');return;}
+    if(this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك المعتمد.');return;}
     this.editingListingId='';this.listingForm=this.emptyListingForm();this.listingFormOpen=true;
     this.$nextTick(()=>this.scrollTo('owner-workspace'));
   },
@@ -1435,7 +1435,7 @@ methods:{
     p.status=status;this.persistDemo();this.toast('تم تحديث حالة البيانات التجريبية محليًا.');
   },
   openAdmin(){
-    if(!this.sessionUser||!['admin','staff'].includes(this.sessionUser.role)){this.openLogin();this.toast('سجّل الدخول بحساب الإدارة أو الموظف التجريبي.');return;}
+    if(!this.sessionUser||!['admin','staff'].includes(this.sessionUser.role)){this.openLogin();this.toast('سجّل الدخول بحساب مدير النظام أو الموظف المعتمد.');return;}
     this.adminOpen=true;
     const valid=this.visibleAdminTabs.map(t=>t.id);
     if(!valid.includes(this.adminTab))this.adminTab=valid[0]||'overview';
