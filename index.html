@@ -1772,7 +1772,21 @@ methods:{
   },
   closeLogin(){if(['admin','employees','settings','staff'].includes(this.adminRouteMode))return;this.loginOpen=false;},
   openEntryChooser(){this.entryChooserOpen=true;},
-  beginSignup(role){this.signupRequestedRole=role==='owner'?'owner':'customer';this.signupName='';this.signupPhone='';this.signupAddress='';this.entryChooserOpen=false;this.authMode='signup';this.loginError='';this.loginOpen=true;},
+  async beginSignup(role){
+    const requested=role==='owner'?'owner':'customer';
+    this.entryChooserOpen=false;
+    if(this.sessionUser?.isSupabaseUser){
+      if(requested==='customer'&&this.sessionUser.role==='customer'){this.scrollTo('my-viewings');return;}
+      if(requested==='owner'&&this.sessionUser.role==='owner'){this.newListing();return;}
+      if(requested==='owner'&&this.sessionUser.role==='customer'){
+        try{const {error}=await supabaseClient.from('profiles').update({requested_role:'owner'}).eq('id',this.sessionUser.id);if(error)throw error;this.toast('تم إرسال طلب اعتماد حسابك كصاحب عقار. بعد موافقة الأدمن هتقدر تنشر إعلاناتك.');}
+        catch(error){console.error(error);this.toast('تعذر إرسال طلب اعتماد المالك. حاول مرة أخرى.');}
+        return;
+      }
+      this.toast('استخدم الحساب المناسب لهذه الخدمة، وصلاحيات الإدارة لا تُمنح من التسجيل العام.');return;
+    }
+    this.signupRequestedRole=requested;this.signupName='';this.signupPhone='';this.signupAddress='';this.authMode='signup';this.loginError='';this.loginOpen=true;
+  },
   openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
   async login(){
     if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
