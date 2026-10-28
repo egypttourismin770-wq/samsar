@@ -537,8 +537,8 @@ img{max-width:100%}
       <button class="icon-button" title="الإشعارات" @click="notificationsOpen = !notificationsOpen">
         ♧<sup v-if="myNotifications.length">{{ myNotifications.length }}</sup>
       </button>
-      <button v-if="sessionUser && sessionUser.role === 'admin'" class="small-button" @click="window.location.href='./admin.html'">لوحة الإدارة</button>
-      <button v-else-if="sessionUser && sessionUser.role === 'staff'" class="small-button" @click="window.location.href='./staff.html'">مساحة الموظفين</button>
+      <button v-if="sessionUser && sessionUser.role === 'admin'" class="small-button" @click="navigateWorkspace('admin')">لوحة الإدارة</button>
+      <button v-else-if="sessionUser && sessionUser.role === 'staff'" class="small-button" @click="navigateWorkspace('staff')">مساحة الموظفين</button>
       <button v-else-if="sessionUser && sessionUser.role === 'owner'" class="small-button" @click="scrollTo('owner-workspace')">لوحة صاحب العقار</button>
       <button v-else-if="sessionUser && sessionUser.role === 'customer'" class="small-button" @click="scrollTo('my-viewings')">حساب العميل</button>
       <button v-else class="login-button" @click="openEntryChooser">إنشاء إعلان / حساب العميل</button>
@@ -1014,7 +1014,34 @@ img{max-width:100%}
             </div>
           </div>
 
-          <div v-if="adminTab === 'listings'" class="admin-content"><h3>إدارة العقارات</h3><article v-for="property in properties" :key="property.id" class="admin-list-item"><img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" /><div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }}</small></div><select :value="property.isBackendRecord ? property.backendStatus : property.status" :disabled="sessionUser?.role !== 'admin'" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published">منشور</option><option value="rejected">مرفوض</option><option value="rented">مؤجر</option><option value="archived">مؤرشف</option></select><button class="outline-light-button" @click="openProperty(property)">عرض</button></article></div>
+          <div v-if="adminTab === 'listings'" class="admin-content">
+            <div class="row-between admin-listing-heading"><div><h3>إدارة كل الإعلانات</h3><p class="muted">الإعلانات الرسمية والتجريبية؛ تعديل الاسم والسعر والتفاصيل والصور من نفس الصفحة.</p></div><button v-if="sessionUser?.role==='admin'" class="primary-button" @click="newListing">＋ إضافة إعلان</button></div>
+            <div class="admin-list-filters"><input v-model.trim="adminListingSearch" placeholder="ابحث بالاسم أو المنطقة أو رقم الإعلان" /><select v-model="adminListingFilter"><option value="all">كل الإعلانات</option><option value="demo">تجريبية</option><option value="real">رسمية</option><option value="published">منشورة</option><option value="sold">مباع / مؤجر</option></select></div>
+            <div v-if="listingFormOpen && sessionUser?.role==='admin'" class="form-panel admin-listing-editor">
+              <div class="row-between"><div><span class="eyebrow">تحكم الإدارة</span><h3>{{ editingListingId ? 'تعديل الإعلان وكل بياناته' : 'إضافة إعلان جديد' }}</h3></div><button class="close-button" @click="cancelListingForm">✕</button></div>
+              <form @submit.prevent="saveListing">
+                <div class="form-grid">
+                  <label>عنوان الإعلان *<input v-model.trim="listingForm.title" required maxlength="120" /></label><label>نوع العملية<select v-model="listingForm.transaction"><option>إيجار</option><option>بيع</option></select></label>
+                  <label>السعر بالجنيه *<input v-model.number="listingForm.price" type="number" min="1" required /></label><label>السعر المقترح<input v-model.number="listingForm.suggestedPrice" type="number" min="0" /></label>
+                  <label>المحافظة أو المدينة *<input v-model.trim="listingForm.area" required /></label><label>المنطقة أو الحي *<input v-model.trim="listingForm.neighborhood" required /></label>
+                  <label>نوع العقار<select v-model="listingForm.type"><option>شقة</option><option>فيلا</option><option>استوديو</option><option>غرفة</option><option>دوبلكس</option><option>بنتهاوس</option><option>شاليه</option><option>محل تجاري</option><option>أخرى</option></select></label><label>المساحة بالمتر *<input v-model.number="listingForm.size" type="number" min="1" required /></label>
+                  <label>غرف النوم<input v-model.number="listingForm.bedrooms" type="number" min="0" /></label><label>الحمامات<input v-model.number="listingForm.bathrooms" type="number" min="0" /></label>
+                  <label>رابط الخريطة<input v-model.trim="listingForm.mapUrl" type="url" /></label><label>تفاصيل العقد<input v-model.trim="listingForm.contractDetails" maxlength="250" /></label>
+                </div>
+                <label class="wide-label">الوصف *<textarea v-model.trim="listingForm.description" rows="4" required maxlength="2000"></textarea></label><label class="wide-label">الخدمات القريبة<input v-model.trim="listingForm.amenitiesText" placeholder="مواصلات، مدارس، سوق..." /></label>
+                <div class="upload-panel"><div class="row-between"><div><strong>صور الإعلان</strong><p class="muted">أضف صورًا من جهازك أو احذف الصور الحالية.</p></div><label class="upload-trigger">＋ اختيار الصور<input type="file" accept="image/*" multiple @change="onListingImages" /></label></div><div class="upload-count">{{ listingForm.previewImages.length }} / 10 صور</div><div class="upload-grid"><div v-for="(photo,index) in listingForm.previewImages" :key="photo.key" class="upload-thumb"><img :src="photo.src" :alt="'صورة إعلان '+(index+1)" @error="onImageError" /><span v-if="index===0" class="main-photo-tag">الصورة الرئيسية</span><button type="button" @click="removeListingImage(index)">✕</button></div></div><p class="hint">الصور الجديدة تُرفع إلى تخزين سمسار بعد الحفظ. لا ترفع مستندات شخصية حساسة من هذا النموذج.</p></div>
+                <div class="form-grid"><label>حالة الإعلان<select v-model="adminListingStatus"><option value="draft">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published">منشور</option><option value="rejected">مرفوض</option><option value="rented">مؤجر / مباع</option><option value="archived">مؤرشف / متوقف</option></select></label><label class="checkbox-line"><input v-model="listingForm.isDemo" type="checkbox" /> إعلان تجريبي (لا يمثل عقارًا حقيقيًا)</label></div>
+                <div class="inline-actions"><button class="primary-button" type="submit">حفظ كل التعديلات</button><button class="outline-light-button" type="button" @click="cancelListingForm">إلغاء</button></div>
+              </form>
+            </div>
+            <article v-for="property in filteredAdminProperties" :key="property.id" class="admin-list-item">
+              <img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" />
+              <div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }} · {{ property.isDemo?'تجريبي':'رسمي' }} · {{ property.listingCode || property.id.slice(0,8) }}</small></div>
+              <select :value="property.isBackendRecord ? property.backendStatus : property.status" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published">منشور</option><option value="rejected">مرفوض</option><option value="rented">مباع / مؤجر</option><option value="archived">مؤرشف / متوقف</option></select>
+              <button class="outline-light-button" @click="openProperty(property)">عرض</button><button v-if="sessionUser?.role==='admin'" class="outline-light-button" @click="editListing(property)">تعديل</button><button v-if="sessionUser?.role==='admin'" class="danger-button" @click="deleteListing(property)">حذف</button>
+            </article>
+            <p v-if="!filteredAdminProperties.length" class="empty-state">لا توجد إعلانات مطابقة للبحث الحالي.</p>
+          </div>
 
           <div v-if="adminTab === 'viewings'" class="admin-content"><h3>طلبات المعاينة</h3><p class="muted">تقدر الإدارة والموظفون المعتمدون يتابعوا الطلبات. الإلغاء يظل متاحًا للعميل والمدير.</p><article v-for="request in viewings" :key="request.id" class="admin-record"><div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div><p>العميل: {{ request.customerName }} · {{ request.phone }}</p><p>الموعد: {{ request.date }} — {{ request.time }}</p><p v-if="request.alternateDate">الموعد البديل: {{ request.alternateDate }} — {{ request.alternateTime }}</p><div class="inline-actions"><select :value="request.status" @change="updateViewingStatus(request,$event.target.value)"><option disabled>بانتظار موافقة المالك</option><option>تمت الموافقة من المالك</option><option disabled>موعد بديل مقترح</option><option disabled>تم قبول الموعد البديل</option><option>مرفوضة من المالك</option><option v-if="sessionUser?.role === 'admin'">ملغاة من العميل</option><option>اكتملت المعاينة</option></select><button v-if="['admin','staff'].includes(sessionUser?.role) && !['ملغاة من العميل','مرفوضة من المالك','اكتملت المعاينة'].includes(request.status)" class="outline-light-button" @click="openAlternateForm(request)">اقتراح موعد بديل</button></div><div v-if="alternateFormId === request.id" class="form-grid alternate-form"><label>التاريخ البديل<input v-model="alternateDate" type="date" :min="today" required /></label><label>الوقت البديل<select v-model="alternateTime"><option>10:00</option><option>12:00</option><option>14:00</option><option>16:00</option><option>18:00</option></select></label><button class="primary-button" @click="suggestAlternate(request)">إرسال الموعد البديل</button></div></article><p v-if="!viewings.length" class="muted">لا توجد طلبات معاينة.</p></div>
 
@@ -1257,6 +1284,15 @@ computed:{
   },
   availableAreas(){
     return [...new Set(this.properties.map(p=>p.neighborhood).filter(Boolean))].sort();
+  },
+  filteredAdminProperties(){
+    const term=(this.adminListingSearch||'').toLocaleLowerCase('ar');
+    return this.properties.filter(p=>{
+      const searchable=[p.title,p.area,p.neighborhood,p.listingCode,p.id,p.description].join(' ').toLocaleLowerCase('ar');
+      const matches=!term||searchable.includes(term),filter=this.adminListingFilter;
+      const kind=filter==='all'||(filter==='demo'&&p.isDemo)||(filter==='real'&&!p.isDemo)||(filter==='published'&&p.backendStatus==='published')||(filter==='sold'&&['rented','مؤجر'].includes(p.backendStatus||p.status));
+      return matches&&kind;
+    }).sort((a,b)=>Number(b.isDemo)-Number(a.isDemo));
   },
   filteredProperties(){
     const term=(this.filters.query||'').toLocaleLowerCase('ar');
@@ -1514,8 +1550,8 @@ methods:{
     const statusNames={draft:'مسودة',pending_review:'قيد المراجعة',published:'منشور',rejected:'مرفوض',rented:'مؤجر',archived:'مؤرشف'};
     const images=(row.property_images||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(item=>{
       const source=String(item.storage_path||'');
-      const src=/^https:\/\//i.test(source)?source:supabaseClient.storage.from('property-images').getPublicUrl(source).data.publicUrl;
-      return {key:item.id,src,storagePath:/^https:\/\//i.test(source)?'':source,altText:item.alt_text||'',isCover:!!item.is_cover};
+      const src=/^https?:\/\//i.test(source)?source:supabaseClient.storage.from('property-images').getPublicUrl(source).data.publicUrl;
+      return {key:item.id,src,storagePath:source,altText:item.alt_text||'',isCover:!!item.is_cover};
     });
     const amenities=(row.property_amenities||[]).map(item=>item.amenity_name).filter(Boolean);
     return {id:row.id,listingCode:row.listing_code,isBackendRecord:true,isDemo:!!row.is_demo,ownerId:row.owner_id,ownerFeeStatus:row.owner_fee_status,
@@ -1828,15 +1864,16 @@ methods:{
     const row=this.viewings.find(v=>v.id===request.id);if(!row)return;row.alternateDate=this.alternateDate;row.alternateTime=this.alternateTime;row.status='موعد بديل مقترح';this.alternateFormId='';this.persistDemo();this.toast('تم تسجيل الموعد البديل محليًا فقط.');
   },
   newListing(){
-    if(this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك المعتمد.');return;}
-    this.editingListingId='';this.listingForm=this.emptyListingForm();this.listingFormOpen=true;
-    this.$nextTick(()=>this.scrollTo('owner-workspace'));
+    const isAdmin=this.sessionUser?.role==='admin';
+    if(!isAdmin&&this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك المعتمد أو مدير النظام.');return;}
+    this.editingListingId='';this.adminListingStatus=isAdmin?'published':'draft';this.listingForm=this.emptyListingForm();this.listingForm.isDemo=isAdmin;this.listingFormOpen=true;
+    if(!isAdmin)this.$nextTick(()=>this.scrollTo('owner-workspace'));
   },
   editListing(property){
-    if(this.sessionUser?.role!=='owner'||property.ownerEmail!==this.sessionUser.email){this.toast('لا تملك صلاحية تعديل هذا الإعلان.');return;}
-    this.editingListingId=property.id;
-    this.listingForm={title:property.title,transaction:property.transaction,type:property.type,price:property.price,suggestedPrice:property.suggestedPrice||'',area:property.area,neighborhood:property.neighborhood,size:property.size,bedrooms:property.bedrooms,bathrooms:property.bathrooms,description:property.description,amenitiesText:(property.amenities||[]).join('، '),contractDetails:property.contractDetails||'',mapUrl:property.mapUrl||'',previewImages:(property.photos||[]).map(photo=>({...photo})),identityDocName:property.identityDocName||'',ownershipDocName:property.ownershipDocName||''};
-    this.listingFormOpen=true;
+    const isAdmin=this.sessionUser?.role==='admin';
+    if(!isAdmin&&(this.sessionUser?.role!=='owner'||property.ownerEmail!==this.sessionUser.email)){this.toast('لا تملك صلاحية تعديل هذا الإعلان.');return;}
+    this.editingListingId=property.id;this.adminListingStatus=property.backendStatus||'draft';
+    this.listingForm={title:property.title,transaction:property.transaction,type:property.type,price:property.price,suggestedPrice:property.suggestedPrice||'',area:property.area,neighborhood:property.neighborhood,size:property.size,bedrooms:property.bedrooms,bathrooms:property.bathrooms,description:property.description,amenitiesText:(property.amenities||[]).join('، '),contractDetails:property.contractDetails||'',mapUrl:property.mapUrl||'',previewImages:(property.photos||[]).map(photo=>({...photo})),identityDocName:property.identityDocName||'',ownershipDocName:property.ownershipDocName||'',isDemo:!!property.isDemo};this.listingFormOpen=true;
   },
   cancelListingForm(){this.listingFormOpen=false;this.editingListingId='';this.listingForm=this.emptyListingForm();},
   compressImage(file){
@@ -1886,7 +1923,8 @@ methods:{
     event.target.value='';
   },
   async saveListing(){
-    if(this.sessionUser?.role!=='owner'||!this.sessionUser?.isSupabaseUser){this.toast('تسجيل الدخول بحساب مالك معتمد مطلوب لنشر إعلان حقيقي.');return;}
+    const isAdmin=this.sessionUser?.role==='admin';
+    if((!isAdmin&&this.sessionUser?.role!=='owner')||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب مالك معتمد أو مدير النظام لحفظ الإعلان.');return;}
     const f=this.listingForm;
     if(!f.title||!f.area||!f.neighborhood||!f.description||Number(f.price)<=0||Number(f.size)<=0){this.toast('راجع العنوان والمنطقة والوصف والسعر والمساحة.');return;}
     if(f.mapUrl&&!this.isValidUrl(f.mapUrl)){this.toast('رابط الخريطة غير صحيح.');return;}
@@ -1898,18 +1936,21 @@ methods:{
       monthly_rent_egp:listingType==='rent'?Number(f.price):null,sale_price_egp:listingType==='sale'?Number(f.price):null,
       suggested_price_egp:Number(f.suggestedPrice)||null,bedrooms:Number(f.bedrooms)||0,bathrooms:Number(f.bathrooms)||0,area_sqm:Number(f.size),
       governorate:f.area,city:f.area,district:f.neighborhood,address_text:f.neighborhood,contract_details:f.contractDetails||null,map_url:f.mapUrl||null};
+    if(isAdmin){payload.status=this.adminListingStatus;payload.is_demo=!!f.isDemo;if(this.adminListingStatus==='published'){payload.published_at=new Date().toISOString();payload.verified_at=new Date().toISOString();payload.rejection_reason=null;}else if(this.adminListingStatus==='rejected')payload.rejection_reason='تم الرفض من الإدارة';}
     try{
       let propertyId;
       if(old?.isBackendRecord){const {data,error}=await supabaseClient.from('properties').update(payload).eq('id',old.id).select('id').single();if(error)throw error;propertyId=data.id;}
-      else{const {data,error}=await supabaseClient.from('properties').insert({...payload,owner_id:this.sessionUser.id,status:'draft',owner_fee_status:'unpaid',verified_at:null,rejection_reason:null,published_at:null}).select('id').single();if(error)throw error;propertyId=data.id;}
+      else if(isAdmin){const {data,error}=await supabaseClient.from('properties').insert({...payload,owner_id:this.sessionUser.id,status:this.adminListingStatus,owner_fee_status:'waived',verified_at:this.adminListingStatus==='published'?new Date().toISOString():null,rejection_reason:this.adminListingStatus==='rejected'?'تم الرفض من الإدارة':null,published_at:this.adminListingStatus==='published'?new Date().toISOString():null,is_demo:!!f.isDemo}).select('id').single();if(error)throw error;propertyId=data.id;}
+      else{const {data,error}=await supabaseClient.from('properties').insert({...payload,owner_id:this.sessionUser.id,status:'draft',owner_fee_status:'unpaid',verified_at:null,rejection_reason:null,published_at:null,is_demo:false}).select('id').single();if(error)throw error;propertyId=data.id;}
       const {data:currentImages,error:imageReadError}=await supabaseClient.from('property_images').select('id,storage_path').eq('property_id',propertyId);if(imageReadError)throw imageReadError;
       const retainedIds=new Set(f.previewImages.filter(photo=>photo.storagePath).map(photo=>photo.key));
       const stale=(currentImages||[]).filter(item=>!retainedIds.has(item.id));
-      if(stale.length){const stalePaths=stale.map(item=>item.storage_path).filter(Boolean);if(stalePaths.length){const {error:storageError}=await supabaseClient.storage.from('property-images').remove(stalePaths);if(storageError)throw storageError;}const {error:deleteError}=await supabaseClient.from('property_images').delete().in('id',stale.map(item=>item.id));if(deleteError)throw deleteError;}
+      if(stale.length){const stalePaths=stale.map(item=>item.storage_path).filter(path=>path&&!/^https?:\/\//i.test(path));if(stalePaths.length){const {error:storageError}=await supabaseClient.storage.from('property-images').remove(stalePaths);if(storageError)throw storageError;}const {error:deleteError}=await supabaseClient.from('property_images').delete().in('id',stale.map(item=>item.id));if(deleteError)throw deleteError;}
       const rowsToAdd=[];
       for(let index=0;index<f.previewImages.length;index++){
         const photo=f.previewImages[index];
-        if(photo.storagePath){const {error:updateImageError}=await supabaseClient.from('property_images').update({sort_order:index,is_cover:index===0}).eq('id',photo.key).eq('property_id',propertyId);if(updateImageError)throw updateImageError;continue;}
+        if(photo.storagePath){const {error:updateImageError}=await supabaseClient.from('property_images').update({sort_order:index,is_cover:index===0,alt_text:f.title}).eq('id',photo.key).eq('property_id',propertyId);if(updateImageError)throw updateImageError;continue;}
+        if(photo.src?.startsWith('https://')||photo.src?.startsWith('http://')){rowsToAdd.push({property_id:propertyId,storage_path:photo.src,alt_text:f.title,sort_order:index,is_cover:index===0});continue;}
         if(!photo.src?.startsWith('data:image/'))continue;
         const response=await fetch(photo.src);const blob=await response.blob();if(blob.size>10*1024*1024)throw new Error('حجم الصورة أكبر من الحد المسموح في التخزين.');
         const path=this.sessionUser.id+'/'+propertyId+'/'+makeId('image')+'.jpg';
@@ -1922,6 +1963,7 @@ methods:{
       if(amenities.length){const {error:amenityInsertError}=await supabaseClient.from('property_amenities').insert(amenities.map(amenity_name=>({property_id:propertyId,amenity_name,category:'general',distance_meters:null})));if(amenityInsertError)throw amenityInsertError;}
       await this.loadBackendProperties();this.cancelListingForm();
       const savedProperty=this.getProperty(propertyId);
+      if(isAdmin){this.toast('تم حفظ الإعلان والصور والتفاصيل من لوحة الإدارة.');return;}
       if(savedProperty?.ownerFeeStatus==='pending'){
         this.toast('تم حفظ المسودة وإثبات الدفع قيد المراجعة. لن تحتاج لإرسال دفعة أخرى قبل قرار الإدارة.');
       }else if(savedProperty?.ownerFeeStatus!=='paid'){
@@ -1932,9 +1974,10 @@ methods:{
     }catch(error){console.error('Samsar listing save failed:',error);this.toast(error?.message||'تعذر حفظ الإعلان. تحقق من صلاحية حساب المالك والصور وحاول مجددًا.');}
   },
   async deleteListing(property){
-    if(property.ownerEmail!==this.sessionUser?.email||this.sessionUser?.role!=='owner'){this.toast('لا تملك صلاحية حذف الإعلان.');return;}
-    if(!confirm('حذف الإعلان؟'))return;
-    if(property.isBackendRecord){try{const {error}=await supabaseClient.from('properties').delete().eq('id',property.id);if(error)throw error;await this.loadBackendProperties();this.toast('تم حذف المسودة.');}catch(error){console.error(error);this.toast('يمكن حذف المسودات فقط؛ الإعلان المنشور يحتاج إيقافه أو أرشفته من الإدارة.');}return;}
+    const isAdmin=this.sessionUser?.role==='admin';
+    if(!isAdmin&&(property.ownerEmail!==this.sessionUser?.email||this.sessionUser?.role!=='owner')){this.toast('لا تملك صلاحية حذف الإعلان.');return;}
+    if(!confirm(isAdmin?'حذف الإعلان نهائيًا من قاعدة البيانات؟ هذا الإجراء لا يمكن التراجع عنه.':'حذف الإعلان؟'))return;
+    if(property.isBackendRecord){try{const {error}=await supabaseClient.from('properties').delete().eq('id',property.id);if(error)throw error;await this.loadBackendProperties();this.toast(isAdmin?'تم حذف الإعلان من قاعدة البيانات.':'تم حذف المسودة.');}catch(error){console.error(error);this.toast(isAdmin?'تعذر حذف الإعلان؛ تحقق من الصلاحيات والعلاقات المرتبطة.':'يمكن حذف المسودات فقط؛ الإعلان المنشور يحتاج إيقافه أو أرشفته من الإدارة.');}return;}
     this.properties=this.properties.filter(p=>p.id!==property.id);this.persistDemo();this.toast('تم حذف الإعلان التجريبي محليًا.');
   },
   async changeListingStatus(id,status){
@@ -1960,7 +2003,8 @@ methods:{
     const valid=this.visibleAdminTabs.map(t=>t.id);
     if(!valid.includes(this.adminTab))this.adminTab=valid[0]||'overview';
   },
-  closeAdmin(){this.adminOpen=false;},
+  navigateWorkspace(role){window.location.href=role==='staff'?'./staff.html':'./admin.html';},
+  closeAdmin(){if(['admin','employees','settings','staff'].includes(this.adminRouteMode))return;this.adminOpen=false;},
   normalizeWhatsAppNumber(value){const digits=String(value||'').replace(/\D/g,'');return digits.startsWith('00')?digits.slice(2):digits;},
   whatsappLink(property=null){
     const phone=this.normalizeWhatsAppNumber(this.settings.whatsappPhone);
