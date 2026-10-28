@@ -1021,7 +1021,7 @@ data() {
     inquiries:[], inquiryOpen:false, inquiryPropertyId:'', inquiryQuestion:'', inquiryBusy:false,
     pendingInquiryPropertyId:'', inquiryDrafts:{}, ownerInquiryDrafts:{}, inquiryOwnerResponses:{},
     aiConversations:[], aiHistoryBusy:false,
-    assistantPropertyId:'', assistantConversationId:'', assistantBusy:false, staffAssistantConversationId:'',
+    assistantPropertyId:'', assistantConversationId:'', assistantConversationGuest:false, assistantBusy:false, staffAssistantConversationId:'',
     paymentMethods:[], paymentTransactions:[], availablePaymentMethods:[], listingPaymentOpen:false,
     pendingPaymentPropertyId:'', selectedPaymentMethodId:'', paymentPayerReference:'', paymentReceiptFile:null,
     paymentReceiptName:'', paymentBusy:false, paymentConfigLoading:false,
@@ -1867,9 +1867,10 @@ methods:{
     try{
       const canUseCustomerAI=!this.sessionUser?.isSupabaseUser||['customer','admin'].includes(this.sessionUser?.role);
       if(canUseCustomerAI&&supabaseClient&&this.aiSettings?.enabled){
-        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:question,propertyId:this.assistantPropertyId||null,conversationId:this.assistantConversationId||null,channel:'customer',guestSessionId:this.sessionUser?.isSupabaseUser?null:this.getGuestSessionId()}});
+        const conversationId=this.sessionUser?.isSupabaseUser&&!this.assistantConversationGuest?this.assistantConversationId||null:null;
+        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:question,propertyId:this.assistantPropertyId||null,conversationId,channel:'customer',guestSessionId:this.sessionUser?.isSupabaseUser?null:this.getGuestSessionId()}});
         if(error)throw error;
-        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantMessages.push({from:'bot',text:data.reply});if(this.sessionUser?.isSupabaseUser)await this.loadAIHistory();return;}
+        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantConversationGuest=!this.sessionUser?.isSupabaseUser;this.assistantMessages.push({from:'bot',text:data.reply});if(this.sessionUser?.isSupabaseUser)await this.loadAIHistory();return;}
       }
       const q=question.toLocaleLowerCase('ar');let reply='استخدم البحث وحدد المنطقة والميزانية ونوع العقار. المعروض حاليًا يتضمن بيانات توضيحية معلّمة كتجريبية.';
       if(q.includes('إيجار')||q.includes('للايجار')||q.includes('للإيجار')){this.filters.transaction='إيجار';reply='عرضت لك العقارات المصنفة للإيجار. راجع شارة «عرض تجريبي» قبل اعتبار أي إعلان متاحًا.';}
