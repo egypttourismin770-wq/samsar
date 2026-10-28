@@ -338,6 +338,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .policy-card strong{color:var(--primary);white-space:nowrap}
 .admin-bottom{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid #e0e8dc}
 .assistant-reply{padding:12px;border-radius:8px;color:#527567;background:#eef6eb;font-size:10px;line-height:1.9}
+.ai-connection-card{display:grid;gap:8px;margin:12px 0;padding:13px;border:1px solid #d8e8db;border-radius:10px;background:#f7fbf5}.ai-connection-card strong{font-size:11px;color:var(--primary)}.ai-connection-card small{color:#82938a;font-size:9px;line-height:1.8}.admin-form input[readonly]{background:#f0f4ed;color:#718078}
 .toast{position:fixed;z-index:100;right:50%;bottom:80px;width:max-content;max-width:calc(100% - 25px);padding:11px 16px;border:1px solid #d3e6d4;border-radius:8px;color:white;background:#075c59;box-shadow:0 8px 28px #16423335;font-size:10px;transform:translateX(50%)}
 .mobile-bottom-nav{display:none}
 
@@ -954,7 +955,7 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'payments'" class="admin-content"><h3>وسائل الدفع ورسوم الإعلانات</h3><p class="muted">لا تفعّل أي وسيلة قبل إدخال بيانات الاستلام الصحيحة وتعليمات الدفع. إثباتات العملاء محفوظة بتخزين خاص.</p><div class="kpi-grid"><div class="kpi-card"><span>العملاء المسجلون</span><strong>{{ paymentMetrics.customers }}</strong></div><div class="kpi-card"><span>العقارات الحقيقية المنشورة</span><strong>{{ paymentMetrics.published }}</strong></div><div class="kpi-card"><span>دفعات بانتظار المراجعة</span><strong>{{ paymentMetrics.pendingPayments }}</strong></div><div class="kpi-card"><span>دفعات معتمدة في آخر 100 عملية</span><strong>{{ money(paymentMetrics.approvedRevenue) }}</strong></div></div><div v-if="paymentConfigLoading" class="muted">جارٍ تحميل إعدادات الدفع...</div><article v-for="method in paymentMethods" :key="method.id" class="admin-card"><div class="row-between"><h4>{{ method.display_name }}</h4><span class="status-pill">{{ method.enabled ? 'مفعّلة' : 'معطّلة' }}</span></div><form class="admin-form" @submit.prevent="savePaymentMethod(method)"><label>اسم صاحب الحساب<input v-model.trim="method.account_label" maxlength="120" /></label><label>رقم الحساب أو التحويل<input v-model.trim="method.account_identifier" maxlength="180" /></label><label>تعليمات الدفع للمالك<textarea v-model.trim="method.instructions" rows="3" maxlength="1000"></textarea></label><label class="checkbox-line"><input type="checkbox" checked disabled /> إثبات الدفع مطلوب دائمًا لمراجعة التحويل</label><label class="checkbox-line"><input v-model="method.enabled" type="checkbox" /> تفعيل هذه الوسيلة للمالكين</label><button class="primary-button" type="submit">حفظ إعداد وسيلة الدفع</button></form></article><h3 style="margin-top:24px">طلبات دفع رسوم الإعلان</h3><div v-if="paymentTransactions.filter(t=>t.purpose==='owner_listing').length" class="staff-inquiry-grid"><article v-for="tx in paymentTransactions.filter(t=>t.purpose==='owner_listing')" :key="tx.id" class="inquiry-card"><div class="row-between"><strong>{{ tx.reference_code }}</strong><span class="status-pill">{{ tx.status }}</span></div><div class="inquiry-meta"><span>المبلغ {{ money(tx.amount_egp) }}</span><span>{{ new Date(tx.created_at).toLocaleString('ar-EG') }}</span><span>{{ tx.payment_method?.display_name || 'وسيلة غير محددة' }}</span></div><p v-if="tx.payer_reference">مرجع الدفع: {{ tx.payer_reference }}</p><a v-if="tx.receiptUrl" :href="tx.receiptUrl" target="_blank" rel="noopener noreferrer">فتح إثبات الدفع (رابط مؤقت)</a><p v-if="tx.rejection_reason" class="muted">{{ tx.rejection_reason }}</p><div v-if="['submitted','under_review','pending'].includes(tx.status)" class="inline-actions"><button class="primary-button" @click="reviewPaymentTransaction(tx,true)">اعتماد الدفع</button><button class="danger-button" @click="reviewPaymentTransaction(tx,false)">رفض الإثبات</button></div></article></div><div v-else class="empty-state">لا توجد طلبات دفع رسوم إعلان حتى الآن.</div></div>
 
-          <div v-if="adminTab === 'settings'" class="admin-content"><h3>إعدادات المنصة — مدير النظام فقط</h3><form class="admin-form" @submit.prevent="saveSettings"><label>اسم المنصة<input v-model.trim="settings.name" required maxlength="60" /></label><label>وصف المنصة<textarea v-model.trim="settings.tagline" rows="3" maxlength="300"></textarea></label><div class="color-grid"><label>البترولي<input v-model="settings.primaryColor" type="color" /></label><label>التركواز<input v-model="settings.accentColor" type="color" /></label><label>الخلفية<input v-model="settings.backgroundColor" type="color" /></label></div><h4>التواصل الرسمي</h4><label>رقم واتساب الرسمي<input v-model.trim="settings.whatsappPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="مثال لمصر: 2010XXXXXXXX" /><small class="muted">صيغة دولية وأرقام فقط مع كود الدولة، من غير + أو مسافات.</small></label><label>رابط صفحة فيسبوك الرسمية<input v-model.trim="siteContactSettings.facebook_url" type="url" placeholder="https://www.facebook.com/اسم-الصفحة" /></label><label>رابط الموقع الرسمي<input v-model.trim="siteContactSettings.official_website_url" type="url" placeholder="https://..." /></label><label>الرابط الذي سيُنشأ له QR<input v-model.trim="siteContactSettings.qr_target_url" type="url" placeholder="https://..." /></label><h4>ربط المساعد الذكي الخارجي</h4><label class="checkbox-line"><input v-model="aiSettings.enabled" type="checkbox" /> تفعيل محاولة الاتصال بالمساعد الخارجي بعد ضبط المفتاح السري</label><label>نوع الاتصال<select v-model="aiSettings.provider"><option value="openai-compatible">واجهة متوافقة مع OpenAI Chat Completions</option></select></label><label>عنوان API الأساسي<input v-model.trim="aiSettings.base_url" type="url" placeholder="https://عنوان-المزود/v1" /></label><label>اسم النموذج<input v-model.trim="aiSettings.model" maxlength="120" placeholder="اسم النموذج لدى مزود الخدمة" /></label><div class="policy-note">لا تضع API Key هنا أو داخل GitHub. بعد تحديد مزود الذكاء الاصطناعي، يُحفظ المفتاح كـ Secret في Supabase Edge Functions باسم SAMSAR_AI_API_KEY. الربط الخارجي لن يعمل حتى يضاف المفتاح وتكون إعدادات المزود متوافقة مع واجهة Chat Completions.</div><button class="primary-button" type="submit">حفظ إعدادات المنصة</button></form></div>
+          <div v-if="adminTab === 'settings'" class="admin-content"><h3>إعدادات المنصة — مدير النظام فقط</h3><form class="admin-form" @submit.prevent="saveSettings"><label>اسم المنصة<input v-model.trim="settings.name" required maxlength="60" /></label><label>وصف المنصة<textarea v-model.trim="settings.tagline" rows="3" maxlength="300"></textarea></label><div class="color-grid"><label>البترولي<input v-model="settings.primaryColor" type="color" /></label><label>التركواز<input v-model="settings.accentColor" type="color" /></label><label>الخلفية<input v-model="settings.backgroundColor" type="color" /></label></div><h4>التواصل الرسمي</h4><label>رقم واتساب الرسمي<input v-model.trim="settings.whatsappPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="مثال لمصر: 2010XXXXXXXX" /><small class="muted">صيغة دولية وأرقام فقط مع كود الدولة، من غير + أو مسافات.</small></label><label>رابط صفحة فيسبوك الرسمية<input v-model.trim="siteContactSettings.facebook_url" type="url" placeholder="https://www.facebook.com/اسم-الصفحة" /></label><label>رابط الموقع الرسمي<input v-model.trim="siteContactSettings.official_website_url" type="url" placeholder="https://..." /></label><label>الرابط الذي سيُنشأ له QR<input v-model.trim="siteContactSettings.qr_target_url" type="url" placeholder="https://..." /></label><h4>المساعد الذكي الرسمي للعميل</h4><p class="muted">اختر مزود الذكاء والنموذج. المساعد يستخدم بيانات الإعلانات المنشورة ومقالات المعرفة، ويحفظ سجل المحادثة في قاعدة سمسار.</p><div class="ai-connection-card"><div class="row-between"><strong>حالة الربط</strong><span class="status-pill">{{ aiSettings.enabled ? 'مفعّل في الإعدادات' : 'متوقف — لن تُرسل طلبات مدفوعة' }}</span></div><small>التفعيل هنا لا يضيف رصيدًا ولا ينشئ اشتراكًا. استخدام واجهة OpenAI API قد يكون برسوم حسب الاستهلاك.</small></div><label>مزود الذكاء الاصطناعي<select v-model="aiSettings.provider" @change="changeAIProvider($event.target.value)"><option value="openai">OpenAI الرسمي</option><option value="openai-compatible">مزود آخر متوافق مع OpenAI Chat Completions</option></select></label><label>عنوان API الأساسي<input v-model.trim="aiSettings.base_url" type="url" :readonly="aiSettings.provider==='openai'" placeholder="https://api.example.com/v1" /><small class="muted" v-if="aiSettings.provider==='openai'">العنوان الرسمي: https://api.openai.com/v1</small></label><label>اختيار نموذج الذكاء<select v-model="aiSettings.model"><option value="gpt-5-nano">GPT-5 Nano — أخف وأقل تكلفة عادةً</option><option value="gpt-5-mini">GPT-5 Mini — الاختيار المتوازن</option><option value="gpt-5.5">GPT-5.5 — قدرات أعلى حسب إتاحة الحساب</option></select></label><label class="checkbox-line"><input v-model="aiSettings.enabled" type="checkbox" /> تفعيل المساعد الخارجي بعد إضافة المفتاح السري واختباره</label><div class="policy-note">مهم: لا تضع مفتاح API هنا أو داخل GitHub. يجب إضافة مفتاح OpenAI API كـ Secret باسم <strong>SAMSAR_AI_API_KEY</strong> في إعدادات Supabase Edge Functions. مفتاح ChatGPT Plus/Free لا يُستخدم بدل مفتاح API، وقد تُحسب تكلفة مستقلة على الاستخدام. لن نفعّل الاتصال تلقائيًا.</div><div class="inline-actions"><button class="primary-button" type="submit">حفظ إعدادات المنصة</button><button class="outline-light-button" type="button" @click="testAIConnection" :disabled="aiTestBusy">{{ aiTestBusy ? 'جارٍ الاختبار…' : 'اختبار اتصال حقيقي' }}</button></div><p class="muted">اختبار الاتصال يرسل رسالة اختبار واحدة إلى المزود وقد يستهلك مبلغًا صغيرًا من رصيد API. لا تضغطه إلا بعد إضافة المفتاح السري.</p></form></div>
 
           <div class="admin-bottom"><button class="outline-light-button" @click="exportBackup">تصدير JSON</button><button class="outline-light-button" @click="closeAdmin">إغلاق</button><button class="danger-button" @click="logout">تسجيل الخروج</button></div>
         </div>
@@ -1014,7 +1015,8 @@ data() {
     favorites:[],
     userRatings:{},
     settings:defaultSettings(),
-    aiSettings:{enabled:false,provider:'openai-compatible',base_url:'',model:''},
+    aiSettings:{enabled:false,provider:'openai',base_url:'https://api.openai.com/v1',model:'gpt-5-mini'},
+    aiTestBusy:false,
     siteContactSettings:{facebook_url:'',official_website_url:'https://egypttourismin770-wq.github.io/samsar/',qr_target_url:'https://egypttourismin770-wq.github.io/samsar/'},
     inquiries:[], inquiryOpen:false, inquiryPropertyId:'', inquiryQuestion:'', inquiryBusy:false,
     pendingInquiryPropertyId:'', inquiryDrafts:{}, ownerInquiryDrafts:{}, inquiryOwnerResponses:{},
@@ -1755,6 +1757,31 @@ methods:{
     if(!link){this.toast('رقم واتساب الرسمي غير مُعدّ بعد. ادخل لوحة الإدارة ثم الإعدادات وسجّل الرقم بالصيغة الدولية.');return;}
     window.open(link,'_blank','noopener,noreferrer');
   },
+  changeAIProvider(provider){
+    this.aiSettings.provider=provider;
+    if(provider==='openai'){
+      this.aiSettings.base_url='https://api.openai.com/v1';
+      if(!this.aiSettings.model)this.aiSettings.model='gpt-5-mini';
+    }else if(this.aiSettings.base_url==='https://api.openai.com/v1'){
+      this.aiSettings.base_url='';
+    }
+  },
+  async testAIConnection(){
+    if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser){this.toast('اختبار الربط متاح لمدير النظام المسجل فقط.');return;}
+    if(!this.aiSettings.base_url||!this.aiSettings.model){this.toast('اختر المزود والنموذج أولًا.');return;}
+    if(!this.aiSettings.enabled){this.toast('احفظ الإعدادات وفعّل المساعد أولًا، ثم اختبر الاتصال.');return;}
+    if(!supabaseClient){this.toast('اتصال قاعدة سمسار غير جاهز.');return;}
+    this.aiTestBusy=true;
+    try{
+      const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:'اختبار اتصال فقط. أجب بجملة قصيرة تؤكد أنك مساعد سمسار، ولا تنفذ أي إجراء.',propertyId:null,conversationId:null,channel:'staff'}});
+      if(error)throw error;
+      if(data?.reply){this.toast('نجح الاتصال بالمساعد الذكي الرسمي.');this.staffAssistantReply=data.reply;this.staffAssistantConversationId=data.conversationId||this.staffAssistantConversationId;}
+      else throw new Error(data?.error||'no_reply');
+    }catch(error){
+      console.error('Samsar AI connection test failed:',error);
+      this.toast('فشل الاختبار. تأكد من المفتاح السري SAMSAR_AI_API_KEY، ثم راجع إعدادات المزود.');
+    }finally{this.aiTestBusy=false;}
+  },
   async loadPublicSettings(){
     if(!supabaseClient)return;
     try{
@@ -1771,6 +1798,8 @@ methods:{
       this.settings.whatsappPhone=typeof phone==='string'?phone:'';
       if(contacts&&typeof contacts==='object'&&!Array.isArray(contacts))this.siteContactSettings={...this.siteContactSettings,...contacts};
       if(ai&&typeof ai==='object'&&!Array.isArray(ai))this.aiSettings={...this.aiSettings,...ai};
+      if(!this.aiSettings.base_url)this.aiSettings.base_url=this.aiSettings.provider==='openai'?'https://api.openai.com/v1':'';
+      if(!this.aiSettings.model)this.aiSettings.model='gpt-5-mini';
       this.paymentPolicy={
         owner_listing_fee_egp:Number(read('owner_listing_fee_egp')??this.paymentPolicy.owner_listing_fee_egp),
         customer_service_fee_egp:Number(read('customer_service_fee_egp')??this.paymentPolicy.customer_service_fee_egp),
