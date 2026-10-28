@@ -512,6 +512,7 @@ img{max-width:100%}
   </header>
 
   <main>
+    <section v-if="backendError" class="section" style="padding-top:10px;padding-bottom:0"><div class="demo-banner">{{ backendError }}</div></section>
     <!-- الواجهة الرئيسية -->
     <section id="home" class="hero">
       <div class="hero-bg"></div>
@@ -845,18 +846,17 @@ img{max-width:100%}
   <div v-if="loginOpen" class="overlay" @click.self="loginOpen=false">
     <section class="modal login-modal">
       <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>تسجيل الدخول</h2></div><button class="close-button" @click="loginOpen=false">✕</button></div>
-      <p class="muted">سجّل دخولك لتجربة مساحة العميل أو المالك أو فريق العمل.</p>
+      <p class="muted">{{ authMode === 'signup' ? 'أنشئ حسابًا حقيقيًا على منصة سمسار.' : 'سجّل الدخول بحسابك المسجل على سمسار.' }}</p>
       <form @submit.prevent="login" class="login-form">
+        <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
+        <label v-if="authMode === 'signup'">رقم الهاتف (اختياري)<input v-model.trim="signupPhone" type="tel" maxlength="25" autocomplete="tel" /></label>
         <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required autocomplete="username" /></label>
-        <label>كلمة المرور<input v-model="loginForm.password" type="password" required autocomplete="current-password" /></label>
+        <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="authMode === 'signup' ? 'new-password' : 'current-password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
-        <button type="submit" class="primary-button full-width">دخول للحساب</button>
+        <button type="submit" class="primary-button full-width">{{ authMode === 'signup' ? 'إنشاء حساب' : 'دخول للحساب' }}</button>
+        <button type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
       </form>
-      <div class="demo-accounts">
-        <strong>حسابات للتجربة فقط</strong>
-        <div v-for="account in demoAccounts" :key="account.role" class="demo-account"><span>{{ account.label }}</span><code>{{ account.email }}</code><button @click="fillDemo(account.role)">استخدام</button></div>
-        <p class="hint">اختار حسابًا تجريبيًا ثم اضغط دخول. هذه الحسابات ليست مصادقة آمنة للنشر الحقيقي.</p>
-      </div>
+      <p class="hint">الحساب الجديد يبدأ بصلاحية عميل. حساب المالك أو الموظف يحتاج اعتماد الإدارة؛ لا تستخدم هذا النموذج لرفع الصلاحيات.</p>
     </section>
   </div>
 
@@ -904,13 +904,13 @@ img{max-width:100%}
             </div>
           </div>
 
-          <div v-if="adminTab === 'listings'" class="admin-content"><h3>إدارة العقارات</h3><article v-for="property in properties" :key="property.id" class="admin-list-item"><img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" /><div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }}</small></div><select :value="property.status" @change="changeListingStatus(property.id,$event.target.value)"><option>منشور تجريبي</option><option>قيد المراجعة التجريبية</option><option>موقوف</option></select><button class="outline-light-button" @click="openProperty(property)">عرض</button></article></div>
+          <div v-if="adminTab === 'listings'" class="admin-content"><h3>إدارة العقارات</h3><article v-for="property in properties" :key="property.id" class="admin-list-item"><img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" /><div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }}</small></div><select :value="property.isBackendRecord ? property.backendStatus : property.status" :disabled="sessionUser?.role !== 'admin'" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published">منشور</option><option value="rejected">مرفوض</option><option value="rented">مؤجر</option><option value="archived">مؤرشف</option></select><button class="outline-light-button" @click="openProperty(property)">عرض</button></article></div>
 
-          <div v-if="adminTab === 'viewings'" class="admin-content"><h3>طلبات المعاينة</h3><article v-for="request in viewings" :key="request.id" class="admin-record"><div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div><p>العميل: {{ request.customerName }} · {{ request.phone }}</p><p>الموعد: {{ request.date }} — {{ request.time }}</p><div class="inline-actions"><select :value="request.status" @change="updateViewingStatus(request,$event.target.value)"><option>بانتظار موافقة المالك</option><option>تمت الموافقة من المالك</option><option>موعد بديل مقترح</option><option>تم قبول الموعد البديل</option><option>مرفوضة من المالك</option><option>ملغاة من العميل</option><option>اكتملت المعاينة</option></select></div></article><p v-if="!viewings.length" class="muted">لا توجد طلبات معاينة.</p></div>
+          <div v-if="adminTab === 'viewings'" class="admin-content"><h3>طلبات المعاينة</h3><p class="muted">تقدر الإدارة والموظفون المعتمدون يتابعوا الطلبات. الإلغاء يظل متاحًا للعميل والمدير.</p><article v-for="request in viewings" :key="request.id" class="admin-record"><div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div><p>العميل: {{ request.customerName }} · {{ request.phone }}</p><p>الموعد: {{ request.date }} — {{ request.time }}</p><p v-if="request.alternateDate">الموعد البديل: {{ request.alternateDate }} — {{ request.alternateTime }}</p><div class="inline-actions"><select :value="request.status" @change="updateViewingStatus(request,$event.target.value)"><option disabled>بانتظار موافقة المالك</option><option>تمت الموافقة من المالك</option><option disabled>موعد بديل مقترح</option><option disabled>تم قبول الموعد البديل</option><option>مرفوضة من المالك</option><option v-if="sessionUser?.role === 'admin'">ملغاة من العميل</option><option>اكتملت المعاينة</option></select><button v-if="['admin','staff'].includes(sessionUser?.role) && !['ملغاة من العميل','مرفوضة من المالك','اكتملت المعاينة'].includes(request.status)" class="outline-light-button" @click="openAlternateForm(request)">اقتراح موعد بديل</button></div><div v-if="alternateFormId === request.id" class="form-grid alternate-form"><label>التاريخ البديل<input v-model="alternateDate" type="date" :min="today" required /></label><label>الوقت البديل<select v-model="alternateTime"><option>10:00</option><option>12:00</option><option>14:00</option><option>16:00</option><option>18:00</option></select></label><button class="primary-button" @click="suggestAlternate(request)">إرسال الموعد البديل</button></div></article><p v-if="!viewings.length" class="muted">لا توجد طلبات معاينة.</p></div>
 
-          <div v-if="adminTab === 'customers'" class="admin-content"><h3>العملاء التجريبيون</h3><article v-for="account in demoAccounts.filter(a => a.role === 'customer')" :key="account.email" class="admin-list-item"><span class="avatar">{{ account.name.slice(0,1) }}</span><div class="admin-list-main"><strong>{{ account.name }}</strong><small>{{ account.email }}</small><small>حساب عرض تجريبي</small></div></article></div>
+          <div v-if="adminTab === 'customers'" class="admin-content"><h3>المستخدمون والصلاحيات</h3><p class="muted">الحسابات الحقيقية في قاعدة البيانات. الحساب الجديد يبدأ كعميل.</p><article v-for="profile in backendProfiles" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="profile.id === sessionUser?.id || roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.length" class="empty-state">لا توجد حسابات للعرض أو أن حسابك ليس مدير النظام.</div><div class="policy-note">لا يمكن تغيير صلاحية مدير النظام الحالي من هنا، ولا يمكن إنشاء مدير جديد من التسجيل العام.</div></div>
 
-          <div v-if="adminTab === 'staff'" class="admin-content"><h3>الموظفون والصلاحيات</h3><article v-for="account in demoAccounts.filter(a => ['admin','staff','owner'].includes(a.role))" :key="account.email" class="admin-list-item"><span class="avatar">{{ account.name.slice(0,1) }}</span><div class="admin-list-main"><strong>{{ account.name }}</strong><small>{{ account.email }}</small><small>{{ account.label }} — صلاحيات توضيحية فقط</small></div></article><div class="policy-note">تسجيل الدخول الحالي تجريبي. يجب تطبيق المصادقة والصلاحيات على خادم قبل نشر الموقع للاستخدام الحقيقي.</div></div>
+          <div v-if="adminTab === 'staff'" class="admin-content"><h3>الموظفون والمالكون</h3><article v-for="profile in backendProfiles.filter(item => ['owner','staff'].includes(item.role))" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.some(item => ['owner','staff'].includes(item.role))" class="empty-state">لا توجد حسابات مالك أو موظف حتى الآن. يمكنك تعيين دور من تبويب المستخدمين.</div><div class="policy-note">تغيير الصلاحية الحقيقي يُحفظ في قاعدة بيانات سمسار ولا يضيف أي صلاحية مدير.</div></div>
 
           <div v-if="adminTab === 'assistant'" class="admin-content"><h3>مساعد الموظفين</h3><p class="muted">مساعد محلي تجريبي لتنظيم متابعة العقارات وطلبات المعاينة.</p><form class="assistant-input" @submit.prevent="askStaffAssistant"><input v-model.trim="staffAssistantInput" placeholder="اكتب سؤالًا عن الطلبات أو الإعلانات..." maxlength="300" /><button type="submit">اسأل</button></form><div v-if="staffAssistantReply" class="assistant-reply">{{ staffAssistantReply }}</div></div>
 
@@ -931,7 +931,11 @@ img{max-width:100%}
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
 <script>
+const SUPABASE_URL = 'https://mrzmjuwmehyhhqknuucq.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable__D5wE0jQYqW2AvD8S-5ang_AHug_Dai';
+const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) || null;
 const STORAGE_KEY = 'samsar-marketplace-demo-v3';
 const fallbackImage = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
 
@@ -947,15 +951,6 @@ return [
   {id:'p4',title:'فيلا فاخرة - الشيخ زايد',transaction:'بيع',type:'فيلا',price:18500000,area:'الجيزة',neighborhood:'الشيخ زايد',size:620,bedrooms:5,bathrooms:5,description:'فيلا تجريبية بتصميم عصري ومساحات داخلية وخارجية كبيرة.',amenities:['حديقة خاصة','جراج','منطقة هادئة'],contractDetails:'بيانات الملكية والتعاقد غير معتمدة في هذا العرض.',mapUrl:'',photos:[{key:'p4a',src:'https://images.unsplash.com/photo-1600047509782-20d39509f26d?auto=format&fit=crop&w=1200&q=85'}],ownerEmail:'owner@samsar.demo',ownerName:'مالك تجريبي',featured:false,status:'منشور تجريبي',rating:4.7,reviews:16},
   {id:'p5',title:'استوديو مريح - المعادي',transaction:'إيجار',type:'استوديو',price:8500,area:'القاهرة',neighborhood:'المعادي',size:68,bedrooms:1,bathrooms:1,description:'استوديو تجريبي مناسب لشخص أو زوجين، بتصميم بسيط ومساحة سهلة الاستخدام.',amenities:['محلات قريبة','مواصلات','إضاءة طبيعية'],contractDetails:'مدة الإيجار والتأمين تُراجع مع المالك.',mapUrl:'',photos:[{key:'p5a',src:'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=85'}],ownerEmail:'owner@samsar.demo',ownerName:'مالك تجريبي',featured:false,status:'منشور تجريبي',rating:4.5,reviews:18},
   {id:'p6',title:'شقة بإطلالة مفتوحة - سموحة',transaction:'بيع',type:'شقة',price:2450000,area:'الإسكندرية',neighborhood:'سموحة',size:175,bedrooms:3,bathrooms:2,description:'شقة تجريبية بمساحة مناسبة للعائلة وتصميم يسمح بتوزيع الأثاث بسهولة.',amenities:['قريبة من الخدمات','مصعد','موقف سيارات'],contractDetails:'يجب فحص المستندات وتفاصيل الملكية بشكل مستقل.',mapUrl:'',photos:[{key:'p6a',src:'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=1200&q=85'}],ownerEmail:'owner@samsar.demo',ownerName:'مالك تجريبي',featured:false,status:'قيد المراجعة التجريبية',rating:4.6,reviews:12}
-];
-}
-
-function defaultAccounts() {
-return [
-  {role:'admin',label:'الإدارة',email:'admin@samsar.demo',password:'Admin123!',name:'مدير النظام'},
-  {role:'staff',label:'موظف',email:'staff@samsar.demo',password:'Staff123!',name:'موظف المتابعة'},
-  {role:'customer',label:'عميل',email:'customer@samsar.demo',password:'Client123!',name:'عميل تجريبي'},
-  {role:'owner',label:'مالك',email:'owner@samsar.demo',password:'Owner123!',name:'مالك تجريبي'}
 ];
 }
 
@@ -980,8 +975,18 @@ data() {
     sessionUser:null,
     pendingPropertyId:'',
     loginOpen:false,
+    authMode:'signin',
+    signupName:'',
+    signupPhone:'',
     loginForm:{email:'',password:''},
     loginError:'',
+    backendAvailable:!!supabaseClient,
+    backendReady:false,
+    backendError:'',
+    dataMode:'demo',
+    authSubscription:null,
+    backendProfiles:[],
+    roleUpdateBusyId:'',
     selectedProperty:null,
     viewingOpen:false,
     viewingPropertyId:'',
@@ -1004,7 +1009,6 @@ data() {
     mobileNav:'home',
     toastMessage:'',
     toastTimer:null,
-    demoAccounts:defaultAccounts(),
     adminTabs:[
       {id:'overview',label:'نظرة عامة',icon:'▦',roles:['admin','staff']},
       {id:'listings',label:'العقارات',icon:'⌂',roles:['admin','staff']},
@@ -1040,7 +1044,9 @@ computed:{
       const type=this.filters.type==='الكل'||p.type===this.filters.type;
       const area=this.filters.area==='الكل'||p.neighborhood===this.filters.area||p.area===this.filters.area;
       const fav=!this.showFavorites||this.favorites.includes(p.id);
-      return matches&&transaction&&type&&area&&fav&&p.status!=='موقوف';
+      const maySeeUnpublished=p.isBackendRecord&&(p.ownerId===this.sessionUser?.id||['admin','staff'].includes(this.sessionUser?.role));
+      const visibleStatus=p.isBackendRecord?(p.backendStatus==='published'||maySeeUnpublished):p.status!=='موقوف';
+      return matches&&transaction&&type&&area&&fav&&visibleStatus;
     }).sort((a,b)=>{
       if(this.filters.sort==='price-asc')return a.price-b.price;
       if(this.filters.sort==='price-desc')return b.price-a.price;
@@ -1093,7 +1099,7 @@ computed:{
   recentViewings(){return [...this.viewings].sort((a,b)=>b.createdAt-a.createdAt).slice(0,4);}
 },
 
-created(){this.loadDemoData();},
+created(){this.loadDemoData();this.initializeBackend();},
 
 beforeUnmount(){if(this.toastTimer)clearTimeout(this.toastTimer);},
 
@@ -1147,15 +1153,103 @@ methods:{
       this.toast('مساحة التخزين في المتصفح ممتلئة. قلل عدد الصور.');
     }
   },
+  async initializeBackend(){
+    if(!supabaseClient){this.backendAvailable=false;this.backendError='تعذر تحميل مكتبة الاتصال؛ جرّب تحديث الصفحة.';return;}
+    this.backendAvailable=true;
+    try{
+      const {data:{session},error}=await supabaseClient.auth.getSession();
+      if(error)throw error;
+      if(session)await this.syncAuthSession(session);
+      await this.loadBackendProperties();
+      await this.loadBackendViewings();
+      await this.loadBackendProfiles();
+      const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
+        setTimeout(async()=>{
+          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.handleDashboardDeepLink();}
+          catch(error){console.error('Samsar auth refresh failed:',error);this.backendError='تعذر تحديث بيانات الحساب من قاعدة البيانات.';}
+        },0);
+      });
+      this.authSubscription=subscription;this.backendReady=true;this.backendError='';
+      this.handleDashboardDeepLink();
+    }catch(error){console.error('Samsar backend initialization failed:',error);this.backendError='تعذر الاتصال بقاعدة البيانات حاليًا؛ البيانات الظاهرة قد تكون تجريبية.';}
+  },
+  handleDashboardDeepLink(){
+    if(!new URLSearchParams(window.location.search).has('dashboard'))return;
+    if(!this.sessionUser){this.openLogin();return;}
+    if(['admin','staff'].includes(this.sessionUser.role)){this.adminOpen=true;this.adminTab='overview';}
+    else this.toast('لوحة الإدارة متاحة لحساب الإدارة أو الموظف المعتمد فقط.');
+  },
+  async syncAuthSession(session){
+    if(!session?.user){if(this.sessionUser?.isSupabaseUser)this.sessionUser=null;return;}
+    const user=session.user;let profile=null;
+    try{const {data,error}=await supabaseClient.from('profiles').select('full_name,phone,whatsapp_phone,role').eq('id',user.id).maybeSingle();if(error)throw error;profile=data;}
+    catch(error){console.error('Could not load Samsar profile:',error);}
+    this.sessionUser={id:user.id,email:user.email||'',name:profile?.full_name||user.user_metadata?.full_name||user.email||'مستخدم سمسار',phone:profile?.phone||user.phone||'',role:profile?.role||'customer',isSupabaseUser:true};
+  },
+  async loadBackendProperties(){
+    if(!supabaseClient)return;
+    const selection=this.sessionUser?.isSupabaseUser
+      ? '*, property_images(*), property_amenities(*), owner:profiles!properties_owner_id_fkey(full_name)'
+      : '*, property_images(*), property_amenities(*)';
+    const {data,error}=await supabaseClient.from('properties').select(selection).order('created_at',{ascending:false});
+    if(error)throw error;
+    const rows=Array.isArray(data)?data:[];
+    if(rows.length){this.properties=rows.map(row=>this.mapBackendProperty(row));this.dataMode='live';}
+    else if(this.sessionUser?.isSupabaseUser){this.properties=[];this.dataMode='live';}
+    else{this.properties=defaultProperties().map(p=>({...p,isDemo:true}));this.dataMode='demo';}
+    this.backendError='';
+  },
+  mapBackendProperty(row){
+    const typeNames={apartment:'شقة',villa:'فيلا',studio:'استوديو',room:'غرفة',duplex:'دوبلكس',penthouse:'بنتهاوس',chalet:'شاليه',commercial:'محل تجاري',other:'أخرى'};
+    const statusNames={draft:'مسودة',pending_review:'قيد المراجعة',published:'منشور',rejected:'مرفوض',rented:'مؤجر',archived:'مؤرشف'};
+    const images=(row.property_images||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(item=>{
+      const {data}=supabaseClient.storage.from('property-images').getPublicUrl(item.storage_path);
+      return {key:item.id,src:data.publicUrl,storagePath:item.storage_path,altText:item.alt_text||'',isCover:!!item.is_cover};
+    });
+    const amenities=(row.property_amenities||[]).map(item=>item.amenity_name).filter(Boolean);
+    return {id:row.id,listingCode:row.listing_code,isBackendRecord:true,isDemo:false,ownerId:row.owner_id,
+      title:row.title,description:row.description||'',transaction:row.listing_type==='rent'?'إيجار':'بيع',type:typeNames[row.property_type]||'أخرى',
+      price:Number(row.listing_type==='rent'?row.monthly_rent_egp:row.sale_price_egp)||0,suggestedPrice:Number(row.suggested_price_egp)||0,
+      area:row.governorate||row.city||'',neighborhood:row.district||'',size:Number(row.area_sqm)||0,bedrooms:Number(row.bedrooms)||0,bathrooms:Number(row.bathrooms)||0,
+      contractDetails:row.contract_details||'',mapUrl:row.map_url||'',amenities,photos:images,ownerEmail:row.owner_id===this.sessionUser?.id?this.sessionUser?.email||'':'',
+      ownerName:row.owner?.full_name||(row.owner_id===this.sessionUser?.id?this.sessionUser?.name:'')||'مالك العقار',featured:false,status:statusNames[row.status]||row.status,backendStatus:row.status,
+      rating:0,reviews:0,identityDocName:'',ownershipDocName:'',createdAt:row.created_at,publishedAt:row.published_at,verifiedAt:row.verified_at};
+  },
+  async loadBackendViewings(){
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser){if(!this.sessionUser?.isSupabaseUser)this.viewings=[];return;}
+    const {data,error}=await supabaseClient.from('viewing_requests').select('*').order('created_at',{ascending:false});if(error)throw error;
+    const states={requested:'بانتظار موافقة المالك',owner_proposed:'موعد بديل مقترح',customer_proposed:'موعد بديل من العميل',confirmed:'تمت الموافقة من المالك',completed:'اكتملت المعاينة',cancelled:'ملغاة من العميل',rejected:'مرفوضة من المالك'};
+    const parts=value=>{if(!value)return {date:'',time:'16:00'};const d=new Date(value);const pad=n=>String(n).padStart(2,'0');return {date:String(d.getFullYear())+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),time:pad(d.getHours())+':'+pad(d.getMinutes())};};
+    this.viewings=(data||[]).map(row=>{const scheduled=parts(row.scheduled_at),alternate=parts(row.owner_proposed_scheduled_at);return {
+      id:row.id,propertyId:row.property_id,customerId:row.customer_id,ownerId:row.owner_id,customerEmail:row.customer_id===this.sessionUser.id?this.sessionUser.email:'',
+      customerName:row.customer_name||'',phone:row.customer_phone||'',date:scheduled.date,time:scheduled.time,note:row.customer_note||'',ownerNote:row.owner_note||'',
+      alternateDate:alternate.date,alternateTime:alternate.time,ownerProposedScheduledAt:row.owner_proposed_scheduled_at||'',status:states[row.status]||row.status,backendStatus:row.status,isBackendRecord:true,createdAt:new Date(row.created_at).getTime()||0};});
+  },
+  async loadBackendProfiles(){
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){this.backendProfiles=[];return;}
+    const {data,error}=await supabaseClient.from('profiles').select('id,full_name,phone,whatsapp_phone,role,created_at').order('created_at',{ascending:false});
+    if(error)throw error;this.backendProfiles=data||[];
+  },
+  async updateProfileRole(profile,newRole){
+    if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser){this.toast('إدارة الصلاحيات متاحة لمدير النظام فقط.');return;}
+    if(profile.id===this.sessionUser.id){this.toast('لا يمكن تغيير صلاحية حساب المدير الحالي من هذه الشاشة.');return;}
+    if(!['customer','owner','staff'].includes(newRole)){this.toast('الصلاحية المطلوبة غير مسموح بها.');return;}
+    this.roleUpdateBusyId=profile.id;
+    try{const {error}=await supabaseClient.from('profiles').update({role:newRole}).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
+    catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
+    finally{this.roleUpdateBusyId='';}
+  },
   getProperty(id){return this.properties.find(p=>p.id===id);},
   openProperty(property){this.selectedProperty=property;},
   toggleFavorite(id){
+    const p=this.getProperty(id);
     const i=this.favorites.indexOf(id);
     if(i>=0)this.favorites.splice(i,1);else this.favorites.push(id);
     this.persistDemo();
-    this.toast(i>=0?'تمت إزالة العقار من المفضلة':'تم حفظ العقار في المفضلة');
+    this.toast(p?.isBackendRecord?'المفضلة في هذه النسخة محفوظة على هذا المتصفح فقط.':(i>=0?'تمت إزالة العقار من المفضلة':'تم حفظ العقار في المفضلة'));
   },
   rateProperty(property,stars){
+    if(property?.isBackendRecord){this.toast('حفظ التقييمات في قاعدة البيانات سيتم تفعيله في مرحلة مستقلة.');return;}
     if(!this.sessionUser){this.toast('سجّل الدخول بحساب العميل لإضافة تقييم تجريبي.');return;}
     if(this.sessionUser.role!=='customer'){this.toast('التقييم متاح لحساب العميل في هذه المعاينة.');return;}
     if(this.userRatings[property.id]){this.toast('تم تسجيل تقييمك لهذا العقار بالفعل.');return;}
@@ -1168,92 +1262,73 @@ methods:{
     this.toast('تم حفظ تقييمك محليًا.');
   },
   openLogin(){this.loginError='';this.loginOpen=true;},
-  fillDemo(role){
-    const account=this.demoAccounts.find(a=>a.role===role);
-    if(account)this.loginForm={email:account.email,password:account.password};
-    this.loginError='';
+  async login(){
+    if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
+    const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password;this.loginError='';
+    try{
+      if(this.authMode==='signup'){
+        if(this.signupName.trim().length<2){this.loginError='اكتب اسمك بالكامل.';return;}
+        const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim()||null}}});if(error)throw error;
+        if(data.session){await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast('تم إنشاء الحساب. حسابك يبدأ كعميل.');}
+        else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
+      }else{
+        const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
+        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');
+        if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
+        else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
+      }
+      this.loginForm={email:'',password:''};
+    }catch(error){console.error('Samsar authentication failed:',error);this.loginError=error?.message||'تعذر إكمال العملية. راجع البريد وكلمة المرور وحاول مرة أخرى.';}
   },
-  login(){
-    const email=this.loginForm.email.trim().toLowerCase();
-    const account=this.demoAccounts.find(a=>a.email===email&&a.password===this.loginForm.password);
-    if(!account){this.loginError='بيانات الدخول غير صحيحة. اختار حسابًا تجريبيًا من القائمة.';return;}
-    this.sessionUser={email:account.email,name:account.name,role:account.role};
-    this.loginOpen=false;
-    this.loginError='';
-    this.toast('تم الدخول للمعاينة التجريبية');
-    this.loginForm={email:'',password:''};
-    if(this.pendingPropertyId&&account.role==='customer'){
-      const property=this.getProperty(this.pendingPropertyId);
-      this.pendingPropertyId='';
-      if(property)this.openViewingModal(property);
-    }else if(this.pendingPropertyId){
-      this.pendingPropertyId='';
-      this.toast('استخدم حساب العميل لطلب المعاينة.');
-    }
+  async logout(){
+    const wasBackendUser=!!this.sessionUser?.isSupabaseUser;
+    if(wasBackendUser&&supabaseClient){const {error}=await supabaseClient.auth.signOut();if(error){this.toast('تعذر تسجيل الخروج من الخادم.');return;}}
+    this.sessionUser=null;this.backendProfiles=[];this.adminOpen=false;this.loginOpen=false;this.listingFormOpen=false;this.selectedProperty=null;this.viewingOpen=false;
+    if(wasBackendUser&&supabaseClient){try{await this.loadBackendProperties();this.viewings=[];}catch(error){console.error(error);}}
+    this.toast('تم تسجيل الخروج.');
   },
-  logout(){
-    this.sessionUser=null;this.adminOpen=false;this.loginOpen=false;this.listingFormOpen=false;this.selectedProperty=null;this.viewingOpen=false;
-    this.toast('تم تسجيل الخروج من المعاينة.');
-  },
+  openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
   requestViewing(property){
-    if(!this.sessionUser){
-      this.pendingPropertyId=property.id;
-      this.selectedProperty=null;
-      this.openLogin();
-      this.toast('سجّل الدخول بحساب العميل لإكمال طلب المعاينة.');
-      return;
-    }
-    if(this.sessionUser.role!=='customer'){this.toast('طلب المعاينة متاح لحساب العميل التجريبي.');return;}
+    if(!property?.isBackendRecord){this.toast('هذا العقار معروض كبيانات تجريبية؛ طلب المعاينة الحقيقي يتطلب إعلانًا منشورًا في قاعدة البيانات.');return;}
+    if(!this.sessionUser){this.pendingPropertyId=property.id;this.selectedProperty=null;this.openLogin();this.toast('سجّل الدخول بحساب العميل لإرسال طلب المعاينة.');return;}
+    if(this.sessionUser.role!=='customer'){this.toast('طلب المعاينة متاح لحساب العميل.');return;}
     this.openViewingModal(property);
   },
-  openViewingModal(property){
-    this.viewingPropertyId=property.id;
-    this.viewingForm=this.emptyViewingForm();
-    this.viewingForm.customerName=this.sessionUser?.name||'';
-    this.viewingOpen=true;
-    this.selectedProperty=null;
+  openViewingModal(property){this.viewingPropertyId=property.id;this.viewingForm=this.emptyViewingForm();this.viewingForm.customerName=this.sessionUser?.name||'';this.viewingOpen=true;this.selectedProperty=null;},
+  async submitViewing(){
+    if(this.sessionUser?.role!=='customer'||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب عميل حقيقي لإرسال الطلب.');return;}
+    const property=this.viewingProperty,form=this.viewingForm;
+    if(!property?.isBackendRecord||!form.customerName||!form.phone||!form.date||form.date<this.today){this.toast('راجع البيانات واختار تاريخًا صحيحًا لعقار منشور.');return;}
+    try{
+      const scheduledAt=new Date(form.date+'T'+(form.time||'16:00')+':00').toISOString();
+      const {error}=await supabaseClient.from('viewing_requests').insert({property_id:property.id,customer_id:this.sessionUser.id,owner_id:property.ownerId,customer_name:form.customerName,customer_phone:form.phone,scheduled_at:scheduledAt,customer_note:form.note||null,status:'requested'});
+      if(error)throw error;await this.loadBackendViewings();this.viewingOpen=false;this.toast('تم إرسال طلب المعاينة إلى قاعدة البيانات.');
+    }catch(error){console.error('Samsar viewing request failed:',error);this.toast('تعذر حفظ طلب المعاينة. تأكد أن العقار منشور وحاول مرة أخرى.');}
   },
-  submitViewing(){
-    if(this.sessionUser?.role!=='customer'){this.toast('سجّل الدخول بحساب العميل أولًا.');return;}
-    if(!this.viewingProperty||!this.viewingForm.customerName||!this.viewingForm.phone||!this.viewingForm.date||this.viewingForm.date<this.today){
-      this.toast('راجع البيانات واختار تاريخًا صحيحًا.');return;
+  async updateViewingStatus(request,status){
+    if(request?.isBackendRecord){
+      if(!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول أولًا.');return;}
+      const states={'تمت الموافقة من المالك':'confirmed','تم قبول الموعد البديل':'confirmed','اكتملت المعاينة':'completed','ملغاة من العميل':'cancelled','مرفوضة من المالك':'rejected','بانتظار موافقة المالك':'requested'};
+      const dbStatus=states[status];if(!dbStatus){this.toast('حالة الطلب غير معروفة.');return;}
+      const payload={status:dbStatus};if(dbStatus==='confirmed')payload.confirmed_at=new Date().toISOString();if(dbStatus==='cancelled')payload.cancelled_by=this.sessionUser.id;
+      try{const {error}=await supabaseClient.from('viewing_requests').update(payload).eq('id',request.id);if(error)throw error;await this.loadBackendViewings();this.toast('تم تحديث حالة طلب المعاينة.');}
+      catch(error){console.error('Samsar viewing update failed:',error);this.toast('تعذر تحديث حالة الطلب؛ قد لا تملك الصلاحية المطلوبة.');}return;
     }
-    this.viewings.unshift({id:makeId('view'),propertyId:this.viewingProperty.id,customerEmail:this.sessionUser.email,customerName:this.viewingForm.customerName,phone:this.viewingForm.phone,date:this.viewingForm.date,time:this.viewingForm.time,note:this.viewingForm.note,alternateDate:'',alternateTime:'',status:'بانتظار موافقة المالك',createdAt:Date.now()});
-    this.persistDemo();
-    this.viewingOpen=false;
-    this.toast('تم تسجيل طلب المعاينة التجريبي.');
+    const row=this.viewings.find(v=>v.id===request.id);if(!row)return;row.status=status;this.persistDemo();this.toast('تم تحديث الحالة محليًا فقط.');
   },
-  updateViewingStatus(request,status){
-    const row=this.viewings.find(v=>v.id===request.id);
-    if(!row)return;
-    row.status=status;
-    this.persistDemo();
-    this.toast('تم تحديث الحالة محليًا.');
+  cancelViewing(request){if(!confirm('هل تريد إلغاء طلب المعاينة؟'))return;this.updateViewingStatus(request,'ملغاة من العميل');},
+  async acceptAlternate(request){
+    if(request?.isBackendRecord){try{const {error}=await supabaseClient.from('viewing_requests').update({status:'confirmed',scheduled_at:request.ownerProposedScheduledAt,confirmed_at:new Date().toISOString()}).eq('id',request.id);if(error)throw error;await this.loadBackendViewings();this.toast('تم تأكيد الموعد البديل.');}catch(error){console.error(error);this.toast('تعذر قبول الموعد البديل؛ حاول مرة أخرى.');}return;}
+    const row=this.viewings.find(v=>v.id===request.id);if(!row||!row.alternateDate)return;row.date=row.alternateDate;row.time=row.alternateTime;row.status='تم قبول الموعد البديل';this.persistDemo();this.toast('تم قبول الموعد البديل في بيانات المعاينة فقط.');
   },
-  cancelViewing(request){
-    if(!confirm('هل تريد إلغاء طلب المعاينة التجريبي؟'))return;
-    this.updateViewingStatus(request,'ملغاة من العميل');
-  },
-  acceptAlternate(request){
-    const row=this.viewings.find(v=>v.id===request.id);
-    if(!row||!row.alternateDate)return;
-    row.date=row.alternateDate;row.time=row.alternateTime;row.status='تم قبول الموعد البديل';
-    this.persistDemo();this.toast('تم قبول الموعد البديل في المعاينة.');
-  },
-  openAlternateForm(request){
-    this.alternateFormId=request.id;
-    this.alternateDate=request.date>=this.today?request.date:this.today;
-    this.alternateTime=request.time||'16:00';
-  },
-  suggestAlternate(request){
+  openAlternateForm(request){this.alternateFormId=request.id;this.alternateDate=request.date>=this.today?request.date:this.today;this.alternateTime=request.time||'16:00';},
+  async suggestAlternate(request){
     if(!this.alternateDate||this.alternateDate<this.today){this.toast('اختار تاريخًا صحيحًا.');return;}
-    const row=this.viewings.find(v=>v.id===request.id);
-    if(!row)return;
-    row.alternateDate=this.alternateDate;row.alternateTime=this.alternateTime;row.status='موعد بديل مقترح';
-    this.alternateFormId='';this.persistDemo();this.toast('تم إرسال الموعد البديل في المعاينة.');
+    if(request?.isBackendRecord){try{const proposed=new Date(this.alternateDate+'T'+(this.alternateTime||'16:00')+':00').toISOString();const {error}=await supabaseClient.from('viewing_requests').update({status:'owner_proposed',owner_proposed_scheduled_at:proposed}).eq('id',request.id);if(error)throw error;await this.loadBackendViewings();this.alternateFormId='';this.toast('تم إرسال الموعد البديل إلى العميل.');}catch(error){console.error(error);this.toast('تعذر إرسال الموعد البديل؛ راجع صلاحيات المالك.');}return;}
+    const row=this.viewings.find(v=>v.id===request.id);if(!row)return;row.alternateDate=this.alternateDate;row.alternateTime=this.alternateTime;row.status='موعد بديل مقترح';this.alternateFormId='';this.persistDemo();this.toast('تم تسجيل الموعد البديل محليًا فقط.');
   },
   newListing(){
-    if(this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك التجريبي.');return;}
+    if(this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك المعتمد.');return;}
     this.editingListingId='';this.listingForm=this.emptyListingForm();this.listingFormOpen=true;
     this.$nextTick(()=>this.scrollTo('owner-workspace'));
   },
@@ -1310,36 +1385,74 @@ methods:{
     this.toast('تم حفظ اسم الملف للعرض فقط ولم يتم رفع المستند.');
     event.target.value='';
   },
-  saveListing(){
-    if(this.sessionUser?.role!=='owner'){this.toast('تسجيل الدخول بحساب المالك مطلوب.');return;}
+  async saveListing(){
+    if(this.sessionUser?.role!=='owner'||!this.sessionUser?.isSupabaseUser){this.toast('تسجيل الدخول بحساب مالك معتمد مطلوب لنشر إعلان حقيقي.');return;}
     const f=this.listingForm;
     if(!f.title||!f.area||!f.neighborhood||!f.description||Number(f.price)<=0||Number(f.size)<=0){this.toast('راجع العنوان والمنطقة والوصف والسعر والمساحة.');return;}
     if(f.mapUrl&&!this.isValidUrl(f.mapUrl)){this.toast('رابط الخريطة غير صحيح.');return;}
     if(f.previewImages.length>10){this.toast('الحد الأقصى 10 صور.');return;}
     const old=this.editingListingId?this.getProperty(this.editingListingId):null;
-    const property={id:this.editingListingId||makeId('prop'),title:f.title,transaction:f.transaction,type:f.type,price:Number(f.price),suggestedPrice:Number(f.suggestedPrice)||0,area:f.area,neighborhood:f.neighborhood,size:Number(f.size),bedrooms:Number(f.bedrooms)||0,bathrooms:Number(f.bathrooms)||0,description:f.description,amenities:f.amenitiesText.split(/[،,]/).map(x=>x.trim()).filter(Boolean),contractDetails:f.contractDetails,mapUrl:f.mapUrl,photos:f.previewImages.length?f.previewImages.map(photo=>({...photo})):(old?.photos?.length?old.photos:[{key:makeId('photo'),src:this.fallbackImage}]),ownerEmail:this.sessionUser.email,ownerName:this.sessionUser.name,featured:old?.featured||false,status:old?.status||'قيد المراجعة التجريبية',rating:old?.rating||0,reviews:old?.reviews||0,identityDocName:f.identityDocName,ownershipDocName:f.ownershipDocName};
-    if(this.editingListingId){const i=this.properties.findIndex(p=>p.id===this.editingListingId);if(i>=0)this.properties.splice(i,1,property);}
-    else this.properties.unshift(property);
-    this.persistDemo();this.cancelListingForm();this.toast('تم حفظ الإعلان التجريبي محليًا.');
+    const typeToDb={'شقة':'apartment','فيلا':'villa','استوديو':'studio','غرفة':'room','دوبلكس':'duplex','بنتهاوس':'penthouse','شاليه':'chalet','محل تجاري':'commercial','أخرى':'other'};
+    const listingType=f.transaction==='إيجار'?'rent':'sale';
+    const payload={title:f.title,description:f.description,property_type:typeToDb[f.type]||'other',listing_type:listingType,
+      monthly_rent_egp:listingType==='rent'?Number(f.price):null,sale_price_egp:listingType==='sale'?Number(f.price):null,
+      suggested_price_egp:Number(f.suggestedPrice)||null,bedrooms:Number(f.bedrooms)||0,bathrooms:Number(f.bathrooms)||0,area_sqm:Number(f.size),
+      governorate:f.area,city:f.area,district:f.neighborhood,address_text:f.neighborhood,contract_details:f.contractDetails||null,map_url:f.mapUrl||null};
+    try{
+      let propertyId;
+      if(old?.isBackendRecord){const {data,error}=await supabaseClient.from('properties').update(payload).eq('id',old.id).select('id').single();if(error)throw error;propertyId=data.id;}
+      else{const {data,error}=await supabaseClient.from('properties').insert({...payload,owner_id:this.sessionUser.id,status:'draft',owner_fee_status:'unpaid',verified_at:null,rejection_reason:null,published_at:null}).select('id').single();if(error)throw error;propertyId=data.id;}
+      const {data:currentImages,error:imageReadError}=await supabaseClient.from('property_images').select('id,storage_path').eq('property_id',propertyId);if(imageReadError)throw imageReadError;
+      const retainedIds=new Set(f.previewImages.filter(photo=>photo.storagePath).map(photo=>photo.key));
+      const stale=(currentImages||[]).filter(item=>!retainedIds.has(item.id));
+      if(stale.length){const stalePaths=stale.map(item=>item.storage_path).filter(Boolean);if(stalePaths.length){const {error:storageError}=await supabaseClient.storage.from('property-images').remove(stalePaths);if(storageError)throw storageError;}const {error:deleteError}=await supabaseClient.from('property_images').delete().in('id',stale.map(item=>item.id));if(deleteError)throw deleteError;}
+      const rowsToAdd=[];
+      for(let index=0;index<f.previewImages.length;index++){
+        const photo=f.previewImages[index];
+        if(photo.storagePath){const {error:updateImageError}=await supabaseClient.from('property_images').update({sort_order:index,is_cover:index===0}).eq('id',photo.key).eq('property_id',propertyId);if(updateImageError)throw updateImageError;continue;}
+        if(!photo.src?.startsWith('data:image/'))continue;
+        const response=await fetch(photo.src);const blob=await response.blob();if(blob.size>10*1024*1024)throw new Error('حجم الصورة أكبر من الحد المسموح في التخزين.');
+        const path=this.sessionUser.id+'/'+propertyId+'/'+makeId('image')+'.jpg';
+        const {error:uploadError}=await supabaseClient.storage.from('property-images').upload(path,blob,{contentType:blob.type||'image/jpeg',upsert:false});if(uploadError)throw uploadError;
+        rowsToAdd.push({property_id:propertyId,storage_path:path,alt_text:f.title,sort_order:index,is_cover:index===0});
+      }
+      if(rowsToAdd.length){const {error:insertImagesError}=await supabaseClient.from('property_images').insert(rowsToAdd);if(insertImagesError)throw insertImagesError;}
+      const {error:amenityDeleteError}=await supabaseClient.from('property_amenities').delete().eq('property_id',propertyId);if(amenityDeleteError)throw amenityDeleteError;
+      const amenities=f.amenitiesText.split(/[،,]/).map(x=>x.trim()).filter(Boolean);
+      if(amenities.length){const {error:amenityInsertError}=await supabaseClient.from('property_amenities').insert(amenities.map(amenity_name=>({property_id:propertyId,amenity_name,category:'general',distance_meters:null})));if(amenityInsertError)throw amenityInsertError;}
+      await this.loadBackendProperties();this.cancelListingForm();this.toast(old?.isBackendRecord?'تم حفظ تعديلات العقار.':'تم حفظ الإعلان كمسودة تنتظر مراجعة الإدارة.');
+    }catch(error){console.error('Samsar listing save failed:',error);this.toast(error?.message||'تعذر حفظ الإعلان. تحقق من صلاحية حساب المالك والصور وحاول مجددًا.');}
   },
-  deleteListing(property){
+  async deleteListing(property){
     if(property.ownerEmail!==this.sessionUser?.email||this.sessionUser?.role!=='owner'){this.toast('لا تملك صلاحية حذف الإعلان.');return;}
-    if(!confirm('حذف الإعلان التجريبي؟'))return;
-    this.properties=this.properties.filter(p=>p.id!==property.id);this.persistDemo();this.toast('تم حذف الإعلان.');
+    if(!confirm('حذف الإعلان؟'))return;
+    if(property.isBackendRecord){try{const {error}=await supabaseClient.from('properties').delete().eq('id',property.id);if(error)throw error;await this.loadBackendProperties();this.toast('تم حذف المسودة.');}catch(error){console.error(error);this.toast('يمكن حذف المسودات فقط؛ الإعلان المنشور يحتاج إيقافه أو أرشفته من الإدارة.');}return;}
+    this.properties=this.properties.filter(p=>p.id!==property.id);this.persistDemo();this.toast('تم حذف الإعلان التجريبي محليًا.');
   },
-  changeListingStatus(id,status){
+  async changeListingStatus(id,status){
     if(!['admin','staff'].includes(this.sessionUser?.role)){this.toast('لا توجد صلاحية لتعديل الحالة.');return;}
     const p=this.getProperty(id);if(!p)return;
-    p.status=status;this.persistDemo();this.toast('تم تحديث الحالة.');
+    if(p.isBackendRecord){
+      if(this.sessionUser?.role!=='admin'){this.toast('تغيير حالة إعلان حقيقي متاح لمدير النظام فقط.');return;}
+      const map={'منشور تجريبي':'published','منشور':'published','قيد المراجعة التجريبية':'pending_review','قيد المراجعة':'pending_review','مسودة':'draft','موقوف':'archived','مؤرشف':'archived','مرفوض':'rejected','مؤجر':'rented'};
+      const allowedStatuses=['draft','pending_review','published','rejected','rented','archived'];
+      const dbStatus=allowedStatuses.includes(status)?status:map[status];if(!dbStatus){this.toast('الحالة المطلوبة غير معروفة.');return;}
+      const now=new Date().toISOString(),patch={status:dbStatus};
+      if(dbStatus==='published'){patch.published_at=p.publishedAt||now;patch.verified_at=p.verifiedAt||now;patch.rejection_reason=null;}
+      else if(dbStatus==='rejected')patch.rejection_reason='تم الرفض من الإدارة';
+      try{const {error}=await supabaseClient.from('properties').update(patch).eq('id',p.id);if(error)throw error;await this.loadBackendProperties();this.toast('تم تحديث حالة الإعلان في قاعدة البيانات.');}
+      catch(error){console.error(error);this.toast('تعذر تحديث الحالة؛ تأكد من صلاحيات الإدارة.');}return;
+    }
+    p.status=status;this.persistDemo();this.toast('تم تحديث حالة البيانات التجريبية محليًا.');
   },
   openAdmin(){
-    if(!this.sessionUser||!['admin','staff'].includes(this.sessionUser.role)){this.openLogin();this.toast('سجّل الدخول بحساب الإدارة أو الموظف التجريبي.');return;}
+    if(!this.sessionUser||!['admin','staff'].includes(this.sessionUser.role)){this.openLogin();this.toast('سجّل الدخول بحساب مدير النظام أو الموظف المعتمد.');return;}
     this.adminOpen=true;
     const valid=this.visibleAdminTabs.map(t=>t.id);
     if(!valid.includes(this.adminTab))this.adminTab=valid[0]||'overview';
   },
   closeAdmin(){this.adminOpen=false;},
-  saveSettings(){this.settings.name=this.settings.name.trim()||'سمسار';this.persistDemo();this.toast('تم حفظ الإعدادات المحلية.');},
+  saveSettings(){this.settings.name=this.settings.name.trim()||'سمسار';this.persistDemo();this.toast('تم حفظ إعدادات الشكل على هذا المتصفح فقط؛ إعدادات المنصة المالية لا تتغير من هنا.');},
   statusClass(status){if(['تمت الموافقة من المالك','تم قبول الموعد البديل','اكتملت المعاينة'].includes(status))return 'good';if(['مرفوضة من المالك','ملغاة من العميل','موقوف'].includes(status))return 'bad';if(['بانتظار موافقة المالك','موعد بديل مقترح','قيد المراجعة التجريبية'].includes(status))return 'pending';return '';},
   goToNotification(item){this.notificationsOpen=false;if(this.sessionUser?.role==='owner')this.scrollTo('owner-workspace');else if(['admin','staff'].includes(this.sessionUser?.role))this.openAdmin();else this.scrollTo('my-viewings');},
   quickAsk(text){this.assistantInput=text;this.askAssistant();},
