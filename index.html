@@ -795,6 +795,7 @@ img{max-width:100%}
             <label>السعر المقترح<input v-model.number="listingForm.suggestedPrice" type="number" min="0" /></label>
             <label>المحافظة أو المدينة *<input v-model.trim="listingForm.area" required placeholder="القاهرة" /></label>
             <label>المنطقة أو الحي *<input v-model.trim="listingForm.neighborhood" required placeholder="مدينة نصر" /></label>
+            <label class="wide-label">العنوان التفصيلي *<input v-model.trim="listingForm.addressText" required maxlength="250" placeholder="الشارع، رقم المبنى، أقرب علامة مميزة" /></label>
             <label>نوع العقار *<select v-model="listingForm.type"><option>شقة</option><option>فيلا</option><option>استوديو</option><option>محل تجاري</option></select></label>
             <label>المساحة بالمتر *<input v-model.number="listingForm.size" type="number" min="1" required /></label>
             <label>عدد غرف النوم<input v-model.number="listingForm.bedrooms" type="number" min="0" /></label>
@@ -1042,7 +1043,7 @@ img{max-width:100%}
                 <div class="form-grid">
                   <label>عنوان الإعلان *<input v-model.trim="listingForm.title" required maxlength="120" /></label><label>نوع العملية<select v-model="listingForm.transaction"><option>إيجار</option><option>بيع</option></select></label>
                   <label>السعر بالجنيه *<input v-model.number="listingForm.price" type="number" min="1" required /></label><label>السعر المقترح<input v-model.number="listingForm.suggestedPrice" type="number" min="0" /></label>
-                  <label>المحافظة أو المدينة *<input v-model.trim="listingForm.area" required /></label><label>المنطقة أو الحي *<input v-model.trim="listingForm.neighborhood" required /></label>
+                  <label>المحافظة أو المدينة *<input v-model.trim="listingForm.area" required /></label><label>المنطقة أو الحي *<input v-model.trim="listingForm.neighborhood" required /></label><label class="wide-label">العنوان التفصيلي *<input v-model.trim="listingForm.addressText" required maxlength="250" /></label>
                   <label>نوع العقار<select v-model="listingForm.type"><option>شقة</option><option>فيلا</option><option>استوديو</option><option>غرفة</option><option>دوبلكس</option><option>بنتهاوس</option><option>شاليه</option><option>محل تجاري</option><option>أخرى</option></select></label><label>المساحة بالمتر *<input v-model.number="listingForm.size" type="number" min="1" required /></label>
                   <label>غرف النوم<input v-model.number="listingForm.bedrooms" type="number" min="0" /></label><label>الحمامات<input v-model.number="listingForm.bathrooms" type="number" min="0" /></label>
                   <label>رابط الخريطة<input v-model.trim="listingForm.mapUrl" type="url" /></label><label>تفاصيل العقد<input v-model.trim="listingForm.contractDetails" maxlength="250" /></label>
@@ -1442,7 +1443,7 @@ beforeUnmount(){if(this.toastTimer)clearTimeout(this.toastTimer);},
 
 methods:{
   emptyListingForm(){
-    return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:'',isDemo:false};
+    return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',addressText:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:'',isDemo:false};
   },
   emptyViewingForm(){return {customerName:'',phone:'',date:'',time:'16:00',note:''};},
   money(value){
@@ -1900,7 +1901,7 @@ methods:{
     const isAdmin=this.sessionUser?.role==='admin';
     if(!isAdmin&&(this.sessionUser?.role!=='owner'||property.ownerEmail!==this.sessionUser.email)){this.toast('لا تملك صلاحية تعديل هذا الإعلان.');return;}
     this.editingListingId=property.id;this.adminListingStatus=property.backendStatus||'draft';
-    this.listingForm={title:property.title,transaction:property.transaction,type:property.type,price:property.price,suggestedPrice:property.suggestedPrice||'',area:property.area,neighborhood:property.neighborhood,size:property.size,bedrooms:property.bedrooms,bathrooms:property.bathrooms,description:property.description,amenitiesText:(property.amenities||[]).join('، '),contractDetails:property.contractDetails||'',mapUrl:property.mapUrl||'',previewImages:(property.photos||[]).map(photo=>({...photo})),identityDocName:property.identityDocName||'',ownershipDocName:property.ownershipDocName||'',isDemo:!!property.isDemo};this.listingFormOpen=true;
+    this.listingForm={title:property.title,transaction:property.transaction,type:property.type,price:property.price,suggestedPrice:property.suggestedPrice||'',area:property.area,neighborhood:property.neighborhood,addressText:property.address||property.neighborhood||'',size:property.size,bedrooms:property.bedrooms,bathrooms:property.bathrooms,description:property.description,amenitiesText:(property.amenities||[]).join('، '),contractDetails:property.contractDetails||'',mapUrl:property.mapUrl||'',previewImages:(property.photos||[]).map(photo=>({...photo})),identityDocName:property.identityDocName||'',ownershipDocName:property.ownershipDocName||'',isDemo:!!property.isDemo};this.listingFormOpen=true;
   },
   cancelListingForm(){this.listingFormOpen=false;this.editingListingId='';this.listingForm=this.emptyListingForm();},
   compressImage(file){
@@ -1962,7 +1963,7 @@ methods:{
     const payload={title:f.title,description:f.description,property_type:typeToDb[f.type]||'other',listing_type:listingType,
       monthly_rent_egp:listingType==='rent'?Number(f.price):null,sale_price_egp:listingType==='sale'?Number(f.price):null,
       suggested_price_egp:Number(f.suggestedPrice)||null,bedrooms:Number(f.bedrooms)||0,bathrooms:Number(f.bathrooms)||0,area_sqm:Number(f.size),
-      governorate:f.area,city:f.area,district:f.neighborhood,address_text:f.neighborhood,contract_details:f.contractDetails||null,map_url:f.mapUrl||null};
+      governorate:f.area,city:f.area,district:f.neighborhood,address_text:f.addressText||f.neighborhood,contract_details:f.contractDetails||null,map_url:f.mapUrl||null};
     if(isAdmin){payload.status=this.adminListingStatus;payload.is_demo=!!f.isDemo;if(this.adminListingStatus==='published'){payload.published_at=new Date().toISOString();payload.verified_at=new Date().toISOString();payload.rejection_reason=null;}else if(this.adminListingStatus==='rejected')payload.rejection_reason='تم الرفض من الإدارة';}
     try{
       let propertyId;
