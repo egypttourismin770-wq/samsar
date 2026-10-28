@@ -862,9 +862,9 @@ img{max-width:100%}
           <label class="wide-label">الخدمات القريبة<input v-model.trim="listingForm.amenitiesText" placeholder="مواصلات، مدارس، سوق..." /></label>
 
           <div class="upload-panel">
-            <div><strong>صور العقار — حتى 10 صور</strong><p class="muted">اضغط على علامة + لاختيار الصور من جهازك. الصور تُضغط تلقائيًا للمعاينة.</p></div>
-            <label class="upload-trigger"><span>＋</span> اختيار الصور من الجهاز
-              <input type="file" accept="image/*" multiple @change="onListingImages" />
+            <div><strong>صور العقار — حتى 10 صور</strong><p class="muted">اضغط «اختيار صورة» لكل صورة على حدة. يمكنك إضافة حتى 10 صور، وتظهر معاينة كل صورة قبل الحفظ.</p></div>
+            <label class="upload-trigger"><span>＋</span> اختيار صورة
+              <input type="file" accept="image/*" @change="onListingImages" />
             </label>
             <div class="upload-count">{{ listingForm.previewImages.length }} / 10 صور</div>
             <div class="upload-grid">
@@ -1070,6 +1070,7 @@ img{max-width:100%}
               <div v-if="realViewings.length" class="staff-recent-list"><div v-for="request in realViewings.slice(0,6)" :key="request.id" class="staff-recent-item"><span class="staff-recent-avatar">◷</span><div class="staff-recent-copy"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><small>رقم الطلب {{ request.id.slice(0,8).toUpperCase() }} · {{ request.customerName || 'عميل' }} · {{ request.date || 'موعد غير محدد' }}</small></div><span class="staff-status-pill">{{ request.status }}</span></div></div>
               <div v-else class="staff-empty">لا توجد طلبات معاينة رسمية حتى الآن.</div>
             </div>
+            <section class="staff-panel staff-ai-panel"><div class="staff-panel-heading"><div><h4>✧ مساعد الموظفين الذكي</h4><p>مساعد داخلي للأسئلة التشغيلية حول الإعلانات وطلبات المعاينة.</p></div><span class="staff-status-pill">مساعد الموظفين</span></div><form class="assistant-input" @submit.prevent="askStaffAssistant"><input v-model.trim="staffAssistantInput" placeholder="اسأل عن إعلان أو طلب معاينة..." maxlength="300" aria-label="اسأل مساعد الموظفين" /><button type="submit" :disabled="!staffAssistantInput.trim()">اسأل</button></form><div v-if="staffAssistantReply" class="assistant-reply" role="status">{{ staffAssistantReply }}</div></section>
           </div>
 
           <div v-if="adminTab === 'overview' && sessionUser?.role === 'admin'" class="admin-content">
@@ -1103,14 +1104,14 @@ img{max-width:100%}
                   <label>رابط الخريطة<input v-model.trim="listingForm.mapUrl" type="url" /></label><label>تفاصيل العقد<input v-model.trim="listingForm.contractDetails" maxlength="250" /></label>
                 </div>
                 <label class="wide-label">الوصف *<textarea v-model.trim="listingForm.description" rows="4" required maxlength="2000"></textarea></label><label class="wide-label">الخدمات القريبة<input v-model.trim="listingForm.amenitiesText" placeholder="مواصلات، مدارس، سوق..." /></label>
-                <div class="upload-panel"><div class="row-between"><div><strong>صور الإعلان</strong><p class="muted">أضف صورًا من جهازك أو احذف الصور الحالية.</p></div><label class="upload-trigger">＋ اختيار الصور<input type="file" accept="image/*" multiple @change="onListingImages" /></label></div><div class="upload-count">{{ listingForm.previewImages.length }} / 10 صور</div><div class="upload-grid"><div v-for="(photo,index) in listingForm.previewImages" :key="photo.key" class="upload-thumb"><img :src="photo.src" :alt="'صورة إعلان '+(index+1)" @error="onImageError" /><span v-if="index===0" class="main-photo-tag">الصورة الرئيسية</span><button type="button" @click="removeListingImage(index)">✕</button></div></div><p class="hint">الصور الجديدة تُرفع إلى تخزين سمسار بعد الحفظ. لا ترفع مستندات شخصية حساسة من هذا النموذج.</p></div>
+                <div class="upload-panel"><div class="row-between"><div><strong>صور الإعلان</strong><p class="muted">أضف صورًا من جهازك أو احذف الصور الحالية.</p></div><label class="upload-trigger">＋ اختيار صورة<input type="file" accept="image/*" @change="onListingImages" /></label></div><div class="upload-count">{{ listingForm.previewImages.length }} / 10 صور</div><div class="upload-grid"><div v-for="(photo,index) in listingForm.previewImages" :key="photo.key" class="upload-thumb"><img :src="photo.src" :alt="'صورة إعلان '+(index+1)" @error="onImageError" /><span v-if="index===0" class="main-photo-tag">الصورة الرئيسية</span><button type="button" @click="removeListingImage(index)">✕</button></div></div><p class="hint">الصور الجديدة تُرفع إلى تخزين سمسار بعد الحفظ. لا ترفع مستندات شخصية حساسة من هذا النموذج.</p></div>
                 <div class="form-grid"><label>حالة الإعلان<select v-model="adminListingStatus"><option value="draft">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published">منشور</option><option value="rejected">مرفوض</option><option value="rented">مؤجر / مباع</option><option value="archived">مؤرشف / متوقف</option></select></label><label class="checkbox-line"><input v-model="listingForm.isDemo" type="checkbox" /> إعلان تجريبي (لا يمثل عقارًا حقيقيًا)</label></div>
                 <div class="inline-actions"><button class="primary-button" type="submit">حفظ كل التعديلات</button><button class="outline-light-button" type="button" @click="cancelListingForm">إلغاء</button></div>
               </form>
             </div>
             <article v-for="property in filteredAdminProperties" :key="property.id" class="admin-list-item">
               <img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" />
-              <div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>{{ money(property.price) }} · {{ property.transaction }} · {{ property.isDemo?'تجريبي':'رسمي' }} · {{ property.listingCode || property.id.slice(0,8) }}</small></div>
+              <div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>رقم العقار: {{ propertyCode(property) }}</small><small>{{ money(property.price) }} · {{ property.transaction }} · {{ property.isDemo?'تجريبي':'رسمي' }}</small></div>
               <select :value="property.isBackendRecord ? property.backendStatus : property.status" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft" :disabled="sessionUser?.role!=='admin'">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published" :disabled="sessionUser?.role!=='admin'">منشور</option><option value="rejected" :disabled="sessionUser?.role!=='admin'">مرفوض</option><option value="rented">مباع / مؤجر</option><option value="archived">مؤرشف / متوقف</option></select>
               <button class="outline-light-button" @click="openProperty(property)">عرض</button><button v-if="sessionUser?.role==='admin'" class="outline-light-button" @click="editListing(property)">تعديل</button><button v-if="sessionUser?.role==='admin'" class="danger-button" @click="deleteListing(property)">حذف</button>
             </article>
@@ -1859,7 +1860,7 @@ methods:{
         if(this.signupPhone.trim().length<7){this.loginError='اكتب رقم هاتف صحيحًا للتواصل.';return;}
         if(this.signupAddress.trim().length<4){this.loginError='اكتب عنوانك الأساسي.';return;}
         const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim(),requested_role:this.signupRequestedRole}}});if(error)throw error;
-        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء الحساب وطلب اعتمادك كصاحب عقار. الإدارة تعتمد الصلاحية قبل النشر.':'تم إنشاء حساب العميل بنجاح.');if(this.signupRequestedRole==='customer')this.$nextTick(()=>this.scrollTo('my-viewings'));if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
+        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء الحساب وطلب اعتمادك كصاحب عقار. الإدارة تعتمد الصلاحية قبل النشر.':'تم إنشاء حساب العميل بنجاح.');if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}else if(this.signupRequestedRole==='customer')this.$nextTick(()=>this.scrollTo('my-viewings'));if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
         else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
       }else{
         const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
@@ -1935,7 +1936,7 @@ methods:{
   requestViewing(property){
     if(property?.isDemo){this.toast('هذا إعلان تجريبي ولا يقبل طلبات معاينة فعلية.');return;}
     if(!property?.isBackendRecord){this.toast('هذا العقار معروض كبيانات تجريبية؛ طلب المعاينة الحقيقي يتطلب إعلانًا منشورًا في قاعدة البيانات.');return;}
-    if(!this.sessionUser){this.pendingPropertyId=property.id;this.selectedProperty=null;this.openLogin();this.toast('سجّل الدخول بحساب العميل لإرسال طلب المعاينة.');return;}
+    if(!this.sessionUser){this.pendingPropertyId=property.id;this.selectedProperty=null;this.signupRequestedRole='customer';this.signupName='';this.signupPhone='';this.signupAddress='';this.authMode='signup';this.loginError='';this.loginOpen=true;this.toast('سجّل بيانات العميل أولًا لإكمال طلب المعاينة.');return;}
     if(this.sessionUser.role!=='customer'){this.toast('طلب المعاينة متاح لحساب العميل.');return;}
     this.openViewingModal(property);
   },
