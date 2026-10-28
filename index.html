@@ -507,6 +507,38 @@ body{padding-bottom:66px}
 
 img{max-width:100%}
 
+/* SAMSAR PREMIUM AMBER IDENTITY */
+.samsar{--primary:#70410e;--accent:#e0a33b;--page-bg:#fffaf0;color:#2f2414}
+.brand-mark{background:linear-gradient(145deg,#f5d17e,#a86112 52%,#58330b);box-shadow:0 8px 24px #9a671e45, inset 0 1px 0 #fff9}
+.login-button,.primary-button,.search-button{border-color:#a76a16;background:linear-gradient(135deg,#e8b34d,#9a5a0c);box-shadow:0 8px 20px #b8792029}
+.small-button,.outline-light-button,.details-button,.danger-button,.outline-button{transition:transform .2s ease,box-shadow .2s ease}
+.small-button:hover,.outline-light-button:hover,.details-button:hover{transform:translateY(-2px);box-shadow:0 10px 24px #9460191c}
+.hero{isolation:isolate}
+.property-card,.house-visual,.step-card,.admin-card,.staff-panel{transition:transform .25s ease,box-shadow .25s ease}
+.property-card:hover,.step-card:hover{transform:translateY(-5px);box-shadow:0 20px 44px #9b6c241e}
+.entry-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.entry-choice{display:flex;min-height:150px;flex-direction:column;align-items:flex-start;gap:10px;padding:18px;border:1px solid #ead6ac;border-radius:18px;text-align:right;background:linear-gradient(145deg,#fffdf8,#fff0d0);box-shadow:0 12px 30px #8e5b1512}
+.entry-choice>span{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;color:#fff;background:linear-gradient(145deg,#f1c66a,#8b4f0c);font-size:24px;box-shadow:0 8px 18px #b8792030}
+.entry-choice strong{font-size:15px;color:#65400d}.entry-choice small{font-size:11px;line-height:1.8;color:#7d6a4c}
+.order-lookup-label{display:block;max-width:440px;margin:0 0 20px;padding:14px;border:1px solid #ead6ac;border-radius:14px;background:#fffdf8}
+.order-lookup-label input,.admin-list-filters input,.admin-list-filters select{width:100%;min-height:40px;margin-top:7px;padding:9px 12px;border:1px solid #e8d5ad;border-radius:9px;background:#fff;color:#493317}
+.admin-listing-heading{margin-bottom:15px}.admin-list-filters{display:grid;grid-template-columns:minmax(0,2fr) minmax(180px,1fr);gap:10px;margin-bottom:16px}
+.admin-listing-editor{margin:12px 0 20px;border-color:#e4c78d;box-shadow:0 18px 45px #9c6b211a}
+.admin-listing-editor .upload-panel{background:#fffcf5;border-color:#e9d8b7}
+.admin-listing-editor .upload-trigger{background:linear-gradient(135deg,#f5d17e,#a86112);color:white}
+.admin-standalone,.staff-standalone{position:fixed!important;inset:0!important;z-index:9999!important;display:block!important;overflow:auto!important;padding:0!important;background:#fffaf0!important;backdrop-filter:none!important}
+.admin-standalone .admin-shell,.staff-standalone .admin-shell{width:100%!important;height:100dvh!important;max-height:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;display:flex!important;flex-direction:column!important}
+.admin-standalone .admin-layout,.staff-standalone .admin-layout{flex:1;min-height:0}
+.admin-standalone .admin-main,.staff-standalone .admin-main{min-height:0;overflow:auto}
+.admin-standalone .admin-header,.staff-standalone .admin-header{border-radius:0!important}
+.admin-standalone .admin-bottom button[ @click="closeAdmin" ],.staff-standalone .admin-bottom button[ @click="closeAdmin" ]{display:none!important}
+.admin-standalone .admin-sidebar{background:linear-gradient(180deg,#75420b,#3f270c)}
+.admin-standalone .admin-sidebar button.active{background:linear-gradient(110deg,#f2c66b,#9a5a0c);color:#fff}
+.admin-standalone .admin-header{background:linear-gradient(115deg,#fff9e9,#f3dca8)}
+.admin-standalone .kpi-card,.admin-standalone .staff-summary-card{border-color:#ead6ac}
+.staff-standalone .admin-sidebar{background:linear-gradient(180deg,#8b5a17,#593a12)}
+@media(max-width:720px){.entry-choice-grid{grid-template-columns:1fr}.entry-choice{min-height:unset}.admin-list-filters{grid-template-columns:1fr}.admin-standalone .admin-layout,.staff-standalone .admin-layout{display:block;overflow:auto}.admin-standalone .admin-sidebar,.staff-standalone .admin-sidebar{position:relative;max-height:none}.admin-standalone .admin-main,.staff-standalone .admin-main{overflow:visible}}
+
 </style>
 </head>
 <body>
@@ -537,11 +569,12 @@ img{max-width:100%}
       <button class="icon-button" title="الإشعارات" @click="notificationsOpen = !notificationsOpen">
         ♧<sup v-if="myNotifications.length">{{ myNotifications.length }}</sup>
       </button>
+      <button class="login-button" @click="sessionUser?.role==='owner'?newListing():openEntryChooser">＋ إنشاء إعلان</button>
       <button v-if="sessionUser && sessionUser.role === 'admin'" class="small-button" @click="navigateWorkspace('admin')">لوحة الإدارة</button>
       <button v-else-if="sessionUser && sessionUser.role === 'staff'" class="small-button" @click="navigateWorkspace('staff')">مساحة الموظفين</button>
       <button v-else-if="sessionUser && sessionUser.role === 'owner'" class="small-button" @click="scrollTo('owner-workspace')">لوحة صاحب العقار</button>
-      <button v-else-if="sessionUser && sessionUser.role === 'customer'" class="small-button" @click="scrollTo('my-viewings')">حساب العميل</button>
-      <button v-else class="login-button" @click="openEntryChooser">إنشاء إعلان / حساب العميل</button>
+      <button v-else-if="sessionUser && sessionUser.role === 'customer'" class="small-button" @click="scrollTo('my-viewings')">متابعة طلباتي</button>
+      <button v-else-if="!sessionUser" class="small-button" @click="openEntryChooser">العميل / متابعة الطلب</button>
     </div>
 
     <div v-if="notificationsOpen" class="notification-popover">
@@ -714,9 +747,13 @@ img{max-width:100%}
     <!-- طلبات العميل -->
     <section v-if="sessionUser && sessionUser.role === 'customer'" id="my-viewings" class="section tinted-section">
       <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة</h2></div></div>
-      <div v-if="customerViewings.length" class="record-grid">
-        <article v-for="request in customerViewings" :key="request.id" class="record-card">
+      <label class="order-lookup-label">رقم الطلب لمتابعته<input v-model.trim="customerOrderLookup" placeholder="اكتب أول 8 خانات من رقم الطلب" maxlength="36" /></label>
+      <div v-if="customerViewingsForLookup.length" class="record-grid">
+        <article v-for="request in customerViewingsForLookup" :key="request.id" class="record-card">
           <div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div>
+          <p><strong>رقم الطلب:</strong> {{ request.id.slice(0,8).toUpperCase() }}</p>
+          <p><strong>السعر:</strong> {{ money(getProperty(request.propertyId)?.price) }}</p>
+          <p><strong>العنوان:</strong> {{ getProperty(request.propertyId)?.area || '—' }}، {{ getProperty(request.propertyId)?.neighborhood || '—' }}</p>
           <p>الموعد المطلوب: {{ request.date }} — {{ request.time }}</p>
           <p v-if="request.alternateDate">الموعد البديل: {{ request.alternateDate }} — {{ request.alternateTime }}</p>
           <div class="inline-actions">
@@ -1241,6 +1278,7 @@ data() {
     adminTab:'overview',
     entryChooserOpen:false,
     trackingOpen:false,
+    customerOrderLookup:'',
     signupRequestedRole:'customer',
     signupAddress:'',
     adminListingSearch:'',
@@ -1324,7 +1362,11 @@ computed:{
     return this.ownerViewings.filter(v=>v.status==='بانتظار موافقة المالك');
   },
   customerViewings(){
-    return this.sessionUser?this.viewings.filter(v=>v.customerEmail===this.sessionUser.email).sort((a,b)=>b.createdAt-a.createdAt):[];
+    return this.sessionUser?this.viewings.filter(v=>v.customerEmail===this.sessionUser.email || v.customerId===this.sessionUser.id).sort((a,b)=>b.createdAt-a.createdAt):[];
+  },
+  customerViewingsForLookup(){
+    const rows=this.customerViewings,term=(this.customerOrderLookup||'').trim().toLowerCase();
+    return term?rows.filter(v=>String(v.id||'').toLowerCase().startsWith(term)||String(v.id||'').slice(0,8).toLowerCase()===term):rows;
   },
   customerInquiries(){return this.inquiries.filter(i=>i.customerId===this.sessionUser?.id).sort((a,b)=>b.createdAt-a.createdAt);},
   ownerInquiries(){return this.inquiries.filter(i=>i.ownerId===this.sessionUser?.id).sort((a,b)=>b.createdAt-a.createdAt);},
@@ -1417,7 +1459,7 @@ beforeUnmount(){if(this.toastTimer)clearTimeout(this.toastTimer);},
 
 methods:{
   emptyListingForm(){
-    return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:''};
+    return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:'',isDemo:false};
   },
   emptyViewingForm(){return {customerName:'',phone:'',date:'',time:'16:00',note:''};},
   money(value){
