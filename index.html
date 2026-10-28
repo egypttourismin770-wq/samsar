@@ -1272,6 +1272,21 @@ methods:{
       customerName:row.customer_name||'',phone:row.customer_phone||'',date:scheduled.date,time:scheduled.time,note:row.customer_note||'',ownerNote:row.owner_note||'',
       alternateDate:alternate.date,alternateTime:alternate.time,ownerProposedScheduledAt:row.owner_proposed_scheduled_at||'',status:states[row.status]||row.status,backendStatus:row.status,isBackendRecord:true,createdAt:new Date(row.created_at).getTime()||0};});
   },
+  async loadBackendInquiries(){
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser){this.inquiries=[];return;}
+    try{
+      const {data,error}=await supabaseClient.from('property_inquiries').select('*,property:properties(title,listing_code,is_demo)').order('created_at',{ascending:false});
+      if(error)throw error;
+      let internal={};
+      if(['admin','staff','owner'].includes(this.sessionUser.role)){
+        const {data:responses,error:responseError}=await supabaseClient.from('property_inquiry_owner_responses').select('inquiry_id,owner_response,responded_at');
+        if(responseError)throw responseError;
+        internal=Object.fromEntries((responses||[]).map(row=>[row.inquiry_id,row]));
+      }
+      const labels={new:'جديد — بانتظار مراجعة الموظف',waiting_owner:'بانتظار رد المالك',owner_replied:'رد المالك — بانتظار الموظف',answered:'تم الرد على العميل',rejected:'مرفوض',closed:'مغلق'};
+      this.inquiries=(data||[]).map(row=>({id:row.id,propertyId:row.property_id,propertyTitle:row.property?.title||'عقار',listingCode:row.property?.listing_code,isDemo:!!row.property?.is_demo,customerId:row.customer_id,ownerId:row.owner_id,assignedStaffId:row.assigned_staff_id,question:row.customer_question,status:row.status,statusLabel:labels[row.status]||row.status,responseToCustomer:row.response_to_customer||'',ownerResponse:internal[row.id]?.owner_response||'',createdAt:new Date(row.created_at).getTime()||0,updatedAt:row.updated_at}));
+    }catch(error){console.error('Samsar inquiry load failed:',error);this.backendError='تعذر تحميل صندوق الاستفسارات من قاعدة البيانات.';}
+  },
   async loadBackendProfiles(){
     if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){this.backendProfiles=[];return;}
     const {data,error}=await supabaseClient.from('profiles').select('id,full_name,phone,whatsapp_phone,role,created_at').order('created_at',{ascending:false});
