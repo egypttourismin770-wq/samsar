@@ -117,6 +117,31 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .inquiry-response{padding:12px;border:1px solid #cde5d8;border-radius:10px;background:#f0faf4;color:#165f3d;font-size:12px;line-height:1.9;white-space:pre-wrap}
 .demo-info{padding:9px 12px;border-radius:9px;background:#fff5dd;color:#79551e;font-size:10px;line-height:1.8}
 .staff-inquiry-grid{display:grid;gap:12px}
+
+.staff-management{display:grid;gap:16px}
+.staff-heading{align-items:flex-start;gap:12px}
+.staff-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.staff-summary-card{display:grid;gap:6px;padding:14px;border:1px solid var(--line,#e2e8e3);border-radius:14px;background:var(--surface,#fff)}
+.staff-summary-card span{font-size:11px;color:var(--muted,#718078)}
+.staff-summary-card strong{font-size:24px;color:var(--primary,#245b45)}
+.staff-search-label{display:grid;gap:7px;font-size:12px;font-weight:700}
+.staff-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.staff-profile-card{display:grid;gap:14px;align-content:start;padding:16px;border:1px solid var(--line,#dfe7e0);border-radius:16px;background:var(--surface,#fff);box-shadow:0 5px 18px rgba(25,60,40,.04)}
+.staff-card-top{display:flex;align-items:center;gap:11px}
+.staff-avatar{width:44px;height:44px;flex:0 0 44px;font-size:18px}
+.staff-identity{display:grid;gap:4px;min-width:0;flex:1}
+.staff-identity strong{font-size:14px}
+.staff-identity small,.staff-permission-heading small,.staff-permission-list .checkbox-line small{font-size:10px;color:var(--muted,#718078);line-height:1.6}
+.staff-role-badge{padding:5px 9px;border-radius:999px;background:#e9f5ec;color:#276342;font-size:10px;white-space:nowrap}
+.staff-permission-list{display:grid;gap:9px;padding:12px;border-radius:12px;background:var(--soft-surface,#f7faf7)}
+.staff-permission-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:7px;border-bottom:1px solid var(--line,#e1e9e2)}
+.staff-permission-list .checkbox-line{display:flex;align-items:flex-start;gap:9px;padding:8px 0;margin:0;border-bottom:1px solid var(--line,#e5ebe6)}
+.staff-permission-list .checkbox-line:last-child{border-bottom:0}
+.staff-permission-list .checkbox-line input{margin-top:4px;flex:0 0 auto}
+.staff-permission-list .checkbox-line span{display:grid;gap:2px}
+.staff-permission-list .checkbox-line strong{font-size:11px}
+.staff-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px}
+@media(max-width:800px){.staff-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.staff-card-grid{grid-template-columns:1fr}}
 .staff-permission-list{display:grid;gap:8px;margin-top:10px;padding:12px;border:1px solid #e5ebe1;border-radius:10px;background:#fbfcf8}.staff-permission-list>strong{font-size:11px;color:var(--primary)}.staff-permission-list .checkbox-line{font-size:10px;align-items:flex-start}
 .featured-badge{top:10px;left:10px;color:#8d6a2c;background:#fff3d4}
 .photo-count{right:9px;bottom:9px;color:white;background:#143f3acb}
@@ -945,7 +970,33 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'customers'" class="admin-content"><h3>المستخدمون والصلاحيات</h3><p class="muted">الحسابات الحقيقية في قاعدة البيانات. الحساب الجديد يبدأ كعميل.</p><article v-for="profile in backendProfiles" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="profile.id === sessionUser?.id || roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label></article><div v-if="!backendProfiles.length" class="empty-state">لا توجد حسابات للعرض أو أن حسابك ليس مدير النظام.</div><div class="policy-note">لا يمكن تغيير صلاحية مدير النظام الحالي من هنا، ولا يمكن إنشاء مدير جديد من التسجيل العام.</div></div>
 
-          <div v-if="adminTab === 'staff'" class="admin-content"><h3>الموظفون والمالكون</h3><article v-for="profile in backendProfiles.filter(item => ['owner','staff'].includes(item.role))" :key="profile.id" class="admin-list-item"><span class="avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="admin-list-main"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>{{ profile.role }} · {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><label class="role-select-label">الصلاحية<select :value="profile.role" :disabled="roleUpdateBusyId === profile.id" @change="updateProfileRole(profile,$event.target.value)"><option value="customer">عميل</option><option value="owner">مالك</option><option value="staff">موظف</option></select></label><div v-if="profile.role==='staff'" class="staff-permission-list"><strong>صلاحيات هذا الموظف</strong><label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.inquiries===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'inquiries',$event.target.checked)" /> مراجعة استفسارات العملاء</label><label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.viewings===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'viewings',$event.target.checked)" /> متابعة طلبات المعاينة</label><label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.ai_assistant===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'ai_assistant',$event.target.checked)" /> استخدام مساعد الموظفين الذكي</label><label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.listings_review===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'listings_review',$event.target.checked)" /> الاطلاع على الإعلانات غير المنشورة للمراجعة</label><label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.operations===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'operations',$event.target.checked)" /> إدارة المهام التشغيلية</label></div></article><div v-if="!backendProfiles.some(item => ['owner','staff'].includes(item.role))" class="empty-state">لا توجد حسابات مالك أو موظف حتى الآن. يمكنك تعيين دور من تبويب المستخدمين.</div><div class="policy-note">تغيير الصلاحية الحقيقي يُحفظ في قاعدة بيانات سمسار ولا يضيف أي صلاحية مدير.</div></div>
+          <div v-if="adminTab === 'staff'" class="admin-content staff-management">
+            <div class="row-between staff-heading"><div><h3>إدارة فريق العمل والصلاحيات</h3><p class="muted">بطاقة مستقلة لكل موظف، والصلاحيات تتحدد لكل حساب على حدة.</p></div><button class="outline-light-button" @click="loadBackendProfiles">تحديث البيانات</button></div>
+            <div class="staff-summary-grid">
+              <div class="staff-summary-card"><span>إجمالي الموظفين</span><strong>{{ backendProfiles.filter(item => item.role === 'staff').length }}</strong></div>
+              <div class="staff-summary-card"><span>صلاحية الاستفسارات</span><strong>{{ backendProfiles.filter(item => item.role === 'staff' && item.staff_permissions?.inquiries === true).length }}</strong></div>
+              <div class="staff-summary-card"><span>صلاحية المعاينات</span><strong>{{ backendProfiles.filter(item => item.role === 'staff' && item.staff_permissions?.viewings === true).length }}</strong></div>
+              <div class="staff-summary-card"><span>صلاحية مساعد الذكاء</span><strong>{{ backendProfiles.filter(item => item.role === 'staff' && item.staff_permissions?.ai_assistant === true).length }}</strong></div>
+            </div>
+            <label class="staff-search-label">بحث في الموظفين<input v-model.trim="staffSearch" type="search" placeholder="ابحث بالاسم أو الهاتف..." /></label>
+            <div class="staff-card-grid">
+              <article v-for="profile in backendProfiles.filter(item => item.role === 'staff').filter(item => !staffSearch || [item.full_name,item.phone,item.whatsapp_phone].some(value => String(value || '').toLocaleLowerCase('ar').includes(staffSearch.toLocaleLowerCase('ar'))))" :key="profile.id" class="staff-profile-card">
+                <div class="staff-card-top"><span class="avatar staff-avatar">{{ (profile.full_name || profile.phone || 'م').slice(0,1) }}</span><div class="staff-identity"><strong>{{ profile.full_name || 'اسم غير مسجل' }}</strong><small>{{ profile.phone || profile.whatsapp_phone || 'لا يوجد رقم هاتف' }}</small><small>انضم {{ profile.created_at ? new Date(profile.created_at).toLocaleDateString('ar-EG') : '—' }}</small></div><span class="staff-role-badge">موظف</span></div>
+                <div class="staff-permission-list">
+                  <div class="staff-permission-heading"><strong>صلاحيات الوصول</strong><small>{{ ['inquiries','viewings','ai_assistant','listings_review','operations'].filter(key => profile.staff_permissions?.[key] === true).length }} من 5 مفعّلة</small></div>
+                  <label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.inquiries===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'inquiries',$event.target.checked)" /> <span><strong>استفسارات العملاء</strong><small>مراجعة الاستفسارات وإرسال الردود للعملاء.</small></span></label>
+                  <label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.viewings===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'viewings',$event.target.checked)" /> <span><strong>طلبات المعاينة</strong><small>متابعة المواعيد وتحديث حالات الطلبات.</small></span></label>
+                  <label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.ai_assistant===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'ai_assistant',$event.target.checked)" /> <span><strong>مساعد الموظفين الذكي</strong><small>استخدام المساعد الداخلي للمساندة التشغيلية.</small></span></label>
+                  <label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.listings_review===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'listings_review',$event.target.checked)" /> <span><strong>مراجعة الإعلانات</strong><small>الاطلاع على الإعلانات غير المنشورة للمراجعة.</small></span></label>
+                  <label class="checkbox-line"><input type="checkbox" :checked="profile.staff_permissions?.operations===true" :disabled="roleUpdateBusyId===profile.id" @change="updateStaffPermission(profile,'operations',$event.target.checked)" /> <span><strong>المهام التشغيلية</strong><small>إدارة المهام المسندة وسير العمل.</small></span></label>
+                </div>
+                <div class="staff-card-footer"><span class="muted">الحفظ مباشر في قاعدة البيانات</span><span v-if="roleUpdateBusyId===profile.id" class="status-pill pending">جارٍ الحفظ…</span></div>
+              </article>
+            </div>
+            <div v-if="!backendProfiles.some(item => item.role === 'staff')" class="empty-state">لا توجد حسابات موظفين حتى الآن. من تبويب «المستخدمون» عيّن حسابًا موجودًا كموظف.</div>
+            <div v-else-if="!backendProfiles.filter(item => item.role === 'staff').some(item => !staffSearch || [item.full_name,item.phone,item.whatsapp_phone].some(value => String(value || '').toLocaleLowerCase('ar').includes(staffSearch.toLocaleLowerCase('ar'))))" class="empty-state">لا توجد نتائج مطابقة للبحث.</div>
+            <div class="policy-note">الأمان: صلاحيات الموظفين لا تمنحهم صلاحية مدير النظام. اختبر كل حساب موظف بعد تغيير الصلاحيات للتأكد من أن الوصول مطابق للخيارات المحددة.</div>
+          </div>
 
           <div v-if="adminTab === 'assistant'" class="admin-content"><h3>مساعد الموظفين</h3><p class="muted">{{ aiSettings.enabled ? 'المساعد الخارجي مهيّأ للإرسال؛ يحتاج إلى مفتاح API سري صالح.' : 'المساعد الخارجي غير مفعّل. يمكن تفعيله بعد إدخال عنوان المزود واسم النموذج وضبط المفتاح السري في Supabase.' }}</p><form class="assistant-input" @submit.prevent="askStaffAssistant"><input v-model.trim="staffAssistantInput" placeholder="اكتب سؤالًا عن الطلبات أو الإعلانات..." maxlength="300" /><button type="submit">اسأل</button></form><div v-if="staffAssistantReply" class="assistant-reply">{{ staffAssistantReply }}</div></div>
 
@@ -1043,7 +1094,7 @@ data() {
     dataMode:'demo',
     authSubscription:null,
     backendProfiles:[],
-    roleUpdateBusyId:'',
+    roleUpdateBusyId:'', staffSearch:'',
     selectedProperty:null,
     viewingOpen:false,
     viewingPropertyId:'',
