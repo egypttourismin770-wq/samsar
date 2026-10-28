@@ -212,8 +212,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .rating-summary{grid-column:1/-1;display:flex;align-items:center;gap:7px}
 .rating-summary strong{color:var(--primary);font-size:12px}
 .rating-summary small{color:#89978d;font-size:9px}
-.detail-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid #e8eee4}
+.detail-footer{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid #e8eee4;flex-wrap:wrap}
 .detail-footer small,.detail-footer strong{display:block}
+.detail-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+.whatsapp-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:12px;padding:12px 15px;background:#168653;color:#fff;font-family:inherit;font-size:11px;font-weight:800;text-decoration:none;cursor:pointer;transition:background .2s,transform .2s}
+.whatsapp-button:hover{background:#106d43;transform:translateY(-1px)}
+.footer-links .whatsapp-link{color:#168653;font-weight:800}
 .detail-footer small{color:#87968d;font-size:9px}
 .detail-footer strong{margin-top:5px;color:var(--primary);font-size:11px}
 .login-modal{width:min(480px,100%)}
@@ -797,8 +801,8 @@ img{max-width:100%}
   <!-- تذييل الصفحة -->
   <footer id="contact" class="footer">
     <div class="footer-main"><a href="#home" class="brand"><span class="brand-mark">⌂</span><span><strong>{{ settings.name }}</strong><small>عقارك أقرب وأسهل</small></span></a><p>{{ settings.tagline }}</p></div>
-    <div class="footer-links"><a href="#properties">استكشاف العقارات</a><a href="#how-it-works">خدماتنا</a><button @click="assistantOpen = true">المساعد الذكي</button><button @click="openLogin">دخول الحسابات</button></div>
-    <div class="footer-bottom"><small>© {{ currentYear }} {{ settings.name }} — نسخة تجريبية</small><small>البيانات الحالية محلية وليست معاملات حقيقية.</small></div>
+    <div class="footer-links"><a href="#properties">استكشاف العقارات</a><a href="#how-it-works">خدماتنا</a><button @click="assistantOpen = true">المساعد الذكي</button><button class="whatsapp-link" @click="openWhatsApp()">تواصل معنا عبر واتساب</button><button @click="openLogin">دخول الحسابات</button></div>
+    <div class="footer-bottom"><small>© {{ currentYear }} {{ settings.name }}</small><small>العقارات التجريبية موضّحة بوضوح؛ الطلبات الحقيقية تعتمد على العقارات المنشورة.</small></div>
   </footer>
 
   <!-- شريط تنقل الموبايل -->
@@ -839,7 +843,7 @@ img{max-width:100%}
         <div class="rating-buttons"><button v-for="star in 5" :key="star" :class="{selected: (userRatings[selectedProperty.id] || 0) >= star}" @click="rateProperty(selectedProperty,star)">★</button></div>
         <div class="rating-summary"><span class="stars">{{ starsText(selectedProperty.rating) }}</span><strong>{{ Number(selectedProperty.rating || 0).toFixed(1) }}</strong><small>({{ selectedProperty.reviews || 0 }} تقييم)</small></div>
       </div>
-      <div class="detail-footer"><div><small>مالك الإعلان</small><strong>{{ selectedProperty.ownerName || 'مالك العقار' }}</strong></div><button class="primary-button" @click="requestViewing(selectedProperty)">طلب معاينة العقار ←</button></div>
+      <div class="detail-footer"><div><small>مالك الإعلان</small><strong>{{ selectedProperty.ownerName || 'مالك العقار' }}</strong></div><div class="detail-actions"><button class="whatsapp-button" @click="openWhatsApp(selectedProperty)">◉ استفسر عبر واتساب</button><button class="primary-button" @click="requestViewing(selectedProperty)">طلب معاينة العقار ←</button></div></div>
       <p class="hint">تحقق من بيانات المالك والمستندات قبل أي اتفاق فعلي.</p>
     </section>
   </div>
@@ -920,7 +924,7 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'finance'" class="admin-content"><h3>التقارير المالية</h3><div class="demo-banner">أمثلة افتراضية فقط؛ ليست إيرادات أو مصروفات فعلية.</div><div class="finance-cards"><div class="finance-card"><small>إيرادات افتراضية</small><strong>{{ money(1250) }}</strong></div><div class="finance-card"><small>مصروفات افتراضية</small><strong>{{ money(300) }}</strong></div><div class="finance-card"><small>صافي افتراضي</small><strong>{{ money(950) }}</strong></div></div></div>
 
-          <div v-if="adminTab === 'settings'" class="admin-content"><h3>إعدادات الهوية</h3><form class="admin-form" @submit.prevent="saveSettings"><label>اسم المنصة<input v-model.trim="settings.name" required maxlength="60" /></label><label>وصف المنصة<textarea v-model.trim="settings.tagline" rows="3" maxlength="300"></textarea></label><div class="color-grid"><label>البترولي<input v-model="settings.primaryColor" type="color" /></label><label>التركواز<input v-model="settings.accentColor" type="color" /></label><label>الخلفية<input v-model="settings.backgroundColor" type="color" /></label></div><button class="primary-button" type="submit">حفظ الإعدادات المحلية</button></form><div class="policy-note">تؤثر الإعدادات على المعاينة المحلية فقط.</div></div>
+          <div v-if="adminTab === 'settings'" class="admin-content"><h3>إعدادات الهوية والتواصل</h3><form class="admin-form" @submit.prevent="saveSettings"><label>اسم المنصة<input v-model.trim="settings.name" required maxlength="60" /></label><label>وصف المنصة<textarea v-model.trim="settings.tagline" rows="3" maxlength="300"></textarea></label><div class="color-grid"><label>البترولي<input v-model="settings.primaryColor" type="color" /></label><label>التركواز<input v-model="settings.accentColor" type="color" /></label><label>الخلفية<input v-model="settings.backgroundColor" type="color" /></label></div><label>رقم واتساب الرسمي لاستفسارات العملاء<input v-model.trim="settings.whatsappPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="مثال لمصر: 2010XXXXXXXX" /><small class="muted">اكتب الرقم بالصيغة الدولية، أرقام فقط مع كود الدولة، من غير + أو مسافات. الرقم سيظهر للزوار كوسيلة تواصل.</small></label><button class="primary-button" type="submit">حفظ الإعدادات</button></form><div class="policy-note">اسم المنصة والألوان تحفظ محليًا في هذا المتصفح. رقم واتساب يُحفظ مركزيًا في قاعدة البيانات عند دخول مدير النظام.</div></div>
 
           <div class="admin-bottom"><button class="outline-light-button" @click="exportBackup">تصدير JSON</button><button class="outline-light-button" @click="closeAdmin">إغلاق</button><button class="danger-button" @click="logout">تسجيل الخروج</button></div>
         </div>
@@ -957,7 +961,7 @@ return [
 }
 
 function defaultSettings() {
-return {name:'سمسار',tagline:'منصتك لاكتشاف العقارات المناسبة وتنظيم طلبات المعاينة بسهولة.',primaryColor:'#075c59',accentColor:'#12a69a',backgroundColor:'#faf7ef'};
+return {name:'سمسار',tagline:'منصتك لاكتشاف العقارات المناسبة وتنظيم طلبات المعاينة بسهولة.',primaryColor:'#075c59',accentColor:'#12a69a',backgroundColor:'#faf7ef',whatsappPhone:''};
 }
 
 const SamsarApp = {
@@ -1163,6 +1167,7 @@ methods:{
       if(error)throw error;
       if(session)await this.syncAuthSession(session);
       await this.loadBackendProperties();
+      await this.loadPublicSettings();
       await this.loadBackendViewings();
       await this.loadBackendProfiles();
       const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
@@ -1197,7 +1202,6 @@ methods:{
     if(error)throw error;
     const rows=Array.isArray(data)?data:[];
     if(rows.length){this.properties=rows.map(row=>this.mapBackendProperty(row));this.dataMode='live';}
-    else if(this.sessionUser?.isSupabaseUser){this.properties=[];this.dataMode='live';}
     else{this.properties=defaultProperties().map(p=>({...p,isDemo:true}));this.dataMode='demo';}
     this.backendError='';
   },
@@ -1454,7 +1458,48 @@ methods:{
     if(!valid.includes(this.adminTab))this.adminTab=valid[0]||'overview';
   },
   closeAdmin(){this.adminOpen=false;},
-  saveSettings(){this.settings.name=this.settings.name.trim()||'سمسار';this.persistDemo();this.toast('تم حفظ إعدادات الشكل على هذا المتصفح فقط؛ إعدادات المنصة المالية لا تتغير من هنا.');},
+  normalizeWhatsAppNumber(value){const digits=String(value||'').replace(/\D/g,'');return digits.startsWith('00')?digits.slice(2):digits;},
+  whatsappLink(property=null){
+    const phone=this.normalizeWhatsAppNumber(this.settings.whatsappPhone);
+    if(!phone||!/^[0-9]{8,15}$/.test(phone))return '';
+    const title=property&&property.title?('بخصوص الإعلان: '+property.title+' ('+(property.listingCode||property.id||'بدون رقم')+')'):'بخصوص منصة سمسار';
+    const message='السلام عليكم، أتواصل من خلال موقع سمسار. '+title+'. أرجو تزويدي بالتفاصيل.';
+    return 'https://wa.me/'+phone+'?text='+encodeURIComponent(message);
+  },
+  openWhatsApp(property=null){
+    const link=this.whatsappLink(property);
+    if(!link){this.toast('رقم واتساب الرسمي غير مُعدّ بعد. ادخل لوحة الإدارة ثم الإعدادات وسجّل الرقم بالصيغة الدولية.');return;}
+    window.open(link,'_blank','noopener,noreferrer');
+  },
+  async loadPublicSettings(){
+    if(!supabaseClient)return;
+    try{
+      const {data,error}=await supabaseClient.from('platform_settings').select('setting_value').eq('setting_key','whatsapp_public_number').maybeSingle();
+      if(error)throw error;
+      const value=data?.setting_value;
+      this.settings.whatsappPhone=typeof value==='string'?value:'';
+    }catch(error){console.warn('تعذر تحميل إعداد واتساب العام:',error);}
+  },
+  async saveSettings(){
+    this.settings.name=this.settings.name.trim()||'سمسار';
+    const phone=this.normalizeWhatsAppNumber(this.settings.whatsappPhone);
+    if(phone&&!/^[0-9]{8,15}$/.test(phone)){this.toast('رقم واتساب غير صحيح. اكتب الرقم الدولي من 8 إلى 15 رقمًا.');return;}
+    this.settings.whatsappPhone=phone;
+    this.persistDemo();
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){
+      this.toast('تم حفظ شكل الموقع على هذا المتصفح فقط؛ لا يمكن حفظ رقم واتساب مركزيًا بدون دخول المدير.');
+      return;
+    }
+    try{
+      const {error}=await supabaseClient.from('platform_settings').upsert({
+        setting_key:'whatsapp_public_number',
+        setting_value:phone,
+        description:'رقم واتساب الرسمي لاستقبال استفسارات العملاء بصيغة دولية دون علامة + أو مسافات'
+      },{onConflict:'setting_key'});
+      if(error)throw error;
+      this.toast('تم حفظ الإعدادات، وتم تحديث رقم واتساب الرسمي في قاعدة البيانات.');
+    }catch(error){console.error('تعذر حفظ إعداد واتساب:',error);this.toast('تم حفظ الشكل محليًا، لكن تعذر حفظ رقم واتساب في قاعدة البيانات.');}
+  },
   statusClass(status){if(['تمت الموافقة من المالك','تم قبول الموعد البديل','اكتملت المعاينة'].includes(status))return 'good';if(['مرفوضة من المالك','ملغاة من العميل','موقوف'].includes(status))return 'bad';if(['بانتظار موافقة المالك','موعد بديل مقترح','قيد المراجعة التجريبية'].includes(status))return 'pending';return '';},
   goToNotification(item){this.notificationsOpen=false;if(this.sessionUser?.role==='owner')this.scrollTo('owner-workspace');else if(['admin','staff'].includes(this.sessionUser?.role))this.openAdmin();else this.scrollTo('my-viewings');},
   quickAsk(text){this.assistantInput=text;this.askAssistant();},
