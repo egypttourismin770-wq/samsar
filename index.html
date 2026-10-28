@@ -545,6 +545,49 @@ img{max-width:100%}
 .staff-standalone .admin-sidebar{background:linear-gradient(180deg,#8b5a17,#593a12)}
 @media(max-width:720px){.entry-choice-grid{grid-template-columns:1fr}.entry-choice{min-height:unset}.admin-list-filters{grid-template-columns:1fr}.admin-standalone .admin-layout,.staff-standalone .admin-layout{display:block;overflow:auto}.admin-standalone .admin-sidebar,.staff-standalone .admin-sidebar{position:relative;max-height:none}.admin-standalone .admin-main,.staff-standalone .admin-main{overflow:visible}}
 
+
+/* Samsar premium admin analytics dashboard */
+.admin-overlay{background:radial-gradient(ellipse at 14% 8%,#d9a4412e,transparent 34%),radial-gradient(ellipse at 90% 90%,#0d7b6928,transparent 38%),#071b1aeb!important;backdrop-filter:blur(12px)}
+.admin-shell{position:relative;border:1px solid #d6a84c80;border-radius:22px;background:#f6f4ed;box-shadow:0 28px 100px #0008,0 0 0 1px #ffffff22,0 0 42px #d9a44120;isolation:isolate}
+.admin-shell:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;border-radius:inherit;background:radial-gradient(ellipse at 80% 0%,#e8bc6320,transparent 38%),radial-gradient(ellipse at 0% 100%,#0b766c12,transparent 40%)}
+.admin-header{position:relative;overflow:hidden;background:linear-gradient(110deg,#fffdf8,#f6f0df 70%,#fffdf8);border-bottom:1px solid #e6d4a7}
+.admin-header:after{content:"";position:absolute;inset-inline-start:-50px;top:-75px;width:190px;height:190px;border:1px solid #d8ac4d35;border-radius:50%;box-shadow:0 0 0 18px #d8ac4d0c,0 0 0 38px #d8ac4d08;pointer-events:none}
+.admin-header h2{background:linear-gradient(100deg,#0a514b,#b47c22);-webkit-background-clip:text;background-clip:text;color:transparent}
+.admin-layout{background:linear-gradient(135deg,#f8f7f1,#edf3ec)}
+.admin-sidebar{position:relative;overflow:hidden;background:linear-gradient(155deg,#092f2c 0%,#07564e 52%,#073b37 100%);border-inline-start:1px solid #d4a84a30}
+.admin-sidebar:before,.admin-sidebar:after{content:"";position:absolute;pointer-events:none;border:1px solid #e7bd5a22;border-radius:50%;width:220px;height:220px;inset-inline-start:-125px;top:18%;box-shadow:0 0 35px #d6a74a12,inset 0 0 30px #d6a74a0b}
+.admin-sidebar:after{width:150px;height:150px;top:auto;bottom:8%;inset-inline-start:auto;inset-inline-end:-95px}
+.sidebar-brand .brand-mark{box-shadow:0 0 22px #e4b64d45;border:1px solid #e5bf654f}
+.admin-sidebar>button{position:relative;z-index:1;transition:transform .22s ease,background .22s ease,color .22s ease,box-shadow .22s ease}
+.admin-sidebar>button.active,.admin-sidebar>button:hover{background:linear-gradient(100deg,#c58b2e,#e7bd61);color:#173b32;box-shadow:0 5px 22px #d7a64230;transform:translateX(-2px)}
+.admin-main{background:radial-gradient(ellipse at 95% 0%,#e4c16b18,transparent 35%),linear-gradient(135deg,#f7f5ed,#f1f5ee)}
+.admin-content h3{letter-spacing:-.2px}
+.demo-banner{border-radius:12px;border-color:#d8b45d;background:linear-gradient(100deg,#fff6d9,#fffdf6);box-shadow:0 6px 22px #bd8b2510}
+.kpi-grid{gap:13px}
+.kpi-card{position:relative;overflow:hidden;border:1px solid #dfd4b6;border-radius:15px;background:linear-gradient(145deg,#fffefa,#fff 62%,#f7f1df);box-shadow:0 7px 20px #264b3b0a;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;animation:adminCardEnter .55s both}
+.kpi-card:nth-child(2){animation-delay:.07s}.kpi-card:nth-child(3){animation-delay:.14s}.kpi-card:nth-child(4){animation-delay:.21s}
+.kpi-card:before{content:"";position:absolute;inset-inline-start:-25px;top:-32px;width:95px;height:95px;border-radius:50%;background:radial-gradient(circle,#e5b74b35,transparent 70%);pointer-events:none}
+.kpi-card:after{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;background:linear-gradient(#e8c46e,#b77b21);opacity:.9}
+.kpi-card:hover{transform:translateY(-4px);border-color:#d7ac4c;box-shadow:0 14px 28px #7a5b1b16,0 0 0 1px #d9ad4c22}
+.kpi-card span{color:#68776d;font-weight:800}
+.kpi-card strong{color:#0b5149;text-shadow:0 2px 16px #d9b65b35}
+.kpi-card>small{color:#879187}
+.dashboard-grid{gap:14px}
+.admin-card{position:relative;overflow:hidden;border:1px solid #e2d8bd;border-radius:16px;background:linear-gradient(145deg,#fffefa,#fff 72%,#f7f3e7);box-shadow:0 8px 24px #1d44350b;transition:transform .25s ease,box-shadow .25s ease}
+.admin-card:hover{box-shadow:0 13px 30px #274a3715,0 0 0 1px #d8b45d40}
+.admin-card h3{display:flex;align-items:center;gap:8px;color:#154d45}
+.admin-card h3:before{content:"";width:5px;height:17px;border-radius:9px;background:linear-gradient(#f0cf7b,#b98024);box-shadow:0 0 12px #d4a13c45}
+.bar-track{height:9px;border:1px solid #dfe8dc;background:#e9eee5;box-shadow:inset 0 1px 3px #1b43380c}
+.bar-track span{background:linear-gradient(90deg,#0b7668,#39b99b,#e0b04c);box-shadow:0 0 12px #0e9c7c38;animation:adminBarReveal .9s cubic-bezier(.2,.7,.2,1) both}
+.amber-track span{background:linear-gradient(90deg,#e5c46e,#d5a13c,#a96c19);box-shadow:0 0 12px #d9a44140}
+.recent-row,.finance-row{border-color:#eee8d8}
+.status-pill{box-shadow:0 2px 10px #1e46300c}
+.admin-list-item{border-color:#e4d9bd;border-radius:12px;box-shadow:0 5px 16px #1c44350a}
+@keyframes adminCardEnter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes adminBarReveal{from{width:0;filter:brightness(1.25)}to{filter:brightness(1)}}
+@media(prefers-reduced-motion:reduce){.kpi-card,.bar-track span{animation:none!important}.admin-sidebar>button,.kpi-card,.admin-card{transition:none!important}}
+@media(max-width:760px){.admin-overlay{padding:4px}.admin-shell{border-radius:15px}.admin-header{padding:12px}.admin-main{background:#f5f4ec}.kpi-card,.admin-card{border-radius:12px}}
+
 </style>
 </head>
 <body>
