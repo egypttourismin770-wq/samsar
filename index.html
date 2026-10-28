@@ -1006,6 +1006,7 @@ data() {
     pendingPaymentPropertyId:'', selectedPaymentMethodId:'', paymentPayerReference:'', paymentReceiptFile:null,
     paymentReceiptName:'', paymentBusy:false, paymentConfigLoading:false,
     paymentPolicy:{owner_listing_fee_egp:50,customer_service_fee_egp:200,refund_customer_percent:75,refund_support_percent:25},
+    paymentMetrics:{customers:0,published:0,approvedRevenue:0,pendingPayments:0},
     filters:{query:'',transaction:'الكل',type:'الكل',area:'الكل',sort:'featured'},
     showFavorites:false,
     sessionUser:null,
@@ -1273,6 +1274,86 @@ methods:{
       id:row.id,propertyId:row.property_id,customerId:row.customer_id,ownerId:row.owner_id,customerEmail:row.customer_id===this.sessionUser.id?this.sessionUser.email:'',
       customerName:row.customer_name||'',phone:row.customer_phone||'',date:scheduled.date,time:scheduled.time,note:row.customer_note||'',ownerNote:row.owner_note||'',
       alternateDate:alternate.date,alternateTime:alternate.time,ownerProposedScheduledAt:row.owner_proposed_scheduled_at||'',status:states[row.status]||row.status,backendStatus:row.status,isBackendRecord:true,createdAt:new Date(row.created_at).getTime()||0};});
+  },
+  async loadAvailablePaymentMethods(){
+    if(!supabaseClient){this.availablePaymentMethods=[];return;}
+    try{
+      const {data,error}=await supabaseClient.from('payment_methods').select('id,code,display_name,provider_type,account_label,account_identifier,instructions,requires_receipt,public_config').eq('enabled',true).order('sort_order',{ascending:true});
+      if(error)throw error;this.availablePaymentMethods=data||[];
+    }catch(error){console.error('Samsar payment methods load failed:',error);this.availablePaymentMethods=[];}
+  },
+  onPaymentReceiptSelect(event){
+    const file=event.target.files?.[0];if(!file)return;
+    if(file.size>5*1024*1024){this.paymentReceiptFile=null;this.paymentReceiptName='';this.toast('إثبات الدفع يجب ألا يزيد عن 5 ميجابايت.');event.target.value='';return;}
+    if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(file.type)){this.paymentReceiptFile=null;this.paymentReceiptName='';this.toast('صيغة الإثبات المسموحة: JPG أو PNG أو WebP أو PDF.');event.target.value='';return;}
+    this.paymentReceiptFile=file;this.paymentReceiptName=file.name;
+  },
+  async submitListingFeePayment(){
+    if(this.sessionUser?.role!=='owner'||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب المالك المعتمد.');return;}
+    const property=this.getProperty(this.pendingPaymentPropertyId);
+    const method=this.availablePaymentMethods.find(item=>item.id===this.selectedPaymentMethodId);
+    if(!property?.isBackendRecord||property.ownerId!==this.sessionUser.id){this.toast('لم يتم العثور على مسودة الإعلان الخاصة بحسابك.');return;}
+    if(!method){this.toast('اختار وسيلة دفع مفعّلة.');return;}
+    if(method.requires_receipt&&!this.paymentReceiptFile){this.toast('ارفع صورة أو ملف إثبات الدفع.');return;}
+    this.paymentBusy=true;
+    try{
+      let receiptPath=null;
+      if(this.paymentReceiptFile){
+        const ext=(this.paymentReceiptFile.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
+        receiptPath=this.sessionUser.id+'/'+property.id+'/'+makeId('receipt')+'.'+ext;
+        const {error:uploadError}=await supabaseClient.storage.from('payment-receipts').upload(receiptPath,this.paymentReceiptFile,{contentType:this.paymentReceiptFile.type,upsert:false});
+        if(uploadError)throw uploadError;
+      }
+      const reference='SAMSAR-LIST-'+property.id.slice(0,8).toUpperCase()+'-'+Date.now().toString(36).toUpperCase();
+      const {error}=await supabaseClient.from('payment_transactions').insert({
+        property_id:property.id,customer_id:this.sessionUser.id,payment_method_id:method.id,
+        reference_code:reference,amount_egp:Number(this.paymentPolicy.owner_listing_fee_egp)||50,
+        purpose:'owner_listing',status:'submitted',payer_reference:this.paymentPayerReference.trim()||null,
+        receipt_storage_path:receiptPath,customer_note:'رسوم إنشاء إعلان عقاري؛ بانتظار مراجعة المدير.'
+      });
+      if(error)throw error;
+      this.listingPaymentOpen=false;this.paymentReceiptFile=null;this.paymentReceiptName='';this.paymentPayerReference='';this.selectedPaymentMethodId='';
+      await this.loadBackendProperties();await this.loadAvailablePaymentMethods();
+      this.toast('تم إرسال إثبات رسوم الإعلان للمراجعة. لن يُنشر الإعلان قبل موافقة المدير.');
+    }catch(error){console.error('Samsar listing fee payment failed:',error);this.toast(error?.message||'تعذر إرسال إثبات الدفع. تأكد من إعداد وسيلة الدفع وحاول مجددًا.');}
+    finally{this.paymentBusy=false;}
+  },
+  async loadPaymentAdminData(){
+    if(!supabaseClient||this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser){this.paymentMethods=[];this.paymentTransactions=[];return;}
+    this.paymentConfigLoading=true;
+    try{
+      const [methods,transactions,customers,published]=await Promise.all([
+        supabaseClient.from('payment_methods').select('*').order('sort_order',{ascending:true}),
+        supabaseClient.from('payment_transactions').select('*,payment_method:payment_methods(display_name)').order('created_at',{ascending:false}).limit(100),
+        supabaseClient.from('profiles').select('id',{count:'exact',head:true}).eq('role','customer'),
+        supabaseClient.from('properties').select('id',{count:'exact',head:true}).eq('status','published').eq('is_demo',false)
+      ]);
+      if(methods.error)throw methods.error;if(transactions.error)throw transactions.error;
+      this.paymentMethods=methods.data||[];
+      this.paymentTransactions=await Promise.all((transactions.data||[]).map(async row=>{
+        let receiptUrl='';
+        if(row.receipt_storage_path){const {data}=await supabaseClient.storage.from('payment-receipts').createSignedUrl(row.receipt_storage_path,3600);receiptUrl=data?.signedUrl||'';}
+        return {...row,receiptUrl};
+      }));
+      this.paymentMetrics={customers:customers.count||0,published:published.count||0,approvedRevenue:this.paymentTransactions.filter(t=>t.status==='approved').reduce((sum,t)=>sum+Number(t.amount_egp||0),0),pendingPayments:this.paymentTransactions.filter(t=>['pending','submitted','under_review'].includes(t.status)).length};
+    }catch(error){console.error('Samsar payment admin load failed:',error);this.toast('تعذر تحميل إعدادات الدفع.');}
+    finally{this.paymentConfigLoading=false;}
+  },
+  async savePaymentMethod(method){
+    if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser)return;
+    if(method.enabled&&(!String(method.account_identifier||'').trim()||!String(method.instructions||'').trim())){this.toast('لا تفعّل وسيلة الدفع قبل إدخال رقم الحساب وتعليمات التحويل.');return;}
+    try{
+      const {error}=await supabaseClient.from('payment_methods').update({enabled:!!method.enabled,account_label:method.account_label||null,account_identifier:method.account_identifier||null,instructions:method.instructions||null,requires_receipt:!!method.requires_receipt,updated_by:this.sessionUser.id,updated_at:new Date().toISOString()}).eq('id',method.id);
+      if(error)throw error;await this.loadPaymentAdminData();await this.loadAvailablePaymentMethods();this.toast('تم حفظ إعداد وسيلة الدفع.');
+    }catch(error){console.error(error);this.toast('تعذر حفظ وسيلة الدفع.');}
+  },
+  async reviewPaymentTransaction(tx,approved){
+    if(this.sessionUser?.role!=='admin'||tx.purpose!=='owner_listing'||!['submitted','under_review','pending'].includes(tx.status))return;
+    const patch={status:approved?'approved':'rejected',reviewed_by:this.sessionUser.id,reviewed_at:new Date().toISOString(),rejection_reason:approved?null:'لم يتم اعتماد إثبات الدفع؛ يرجى التواصل مع فريق سمسار.'};
+    try{
+      const {error}=await supabaseClient.from('payment_transactions').update(patch).eq('id',tx.id);
+      if(error)throw error;await this.loadPaymentAdminData();await this.loadBackendProperties();this.toast(approved?'تم اعتماد الدفع ونقل الإعلان إلى قائمة مراجعة النشر.':'تم رفض الدفع وإرجاع رسوم الإعلان إلى حالة غير مدفوعة.');
+    }catch(error){console.error(error);this.toast('تعذر تحديث حالة الدفع.');}
   },
   async loadBackendInquiries(){
     if(!supabaseClient||!this.sessionUser?.isSupabaseUser){this.inquiries=[];return;}
