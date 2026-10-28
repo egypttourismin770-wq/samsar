@@ -1269,7 +1269,7 @@ computed:{
   realProperties(){return this.properties.filter(p=>p.isBackendRecord&&!p.isDemo);},
   realViewings(){return this.viewings.filter(v=>{const p=this.properties.find(p=>p.id===v.propertyId);return !!p&&p.isBackendRecord&&!p.isDemo;});},
   pendingInquiryCount(){return this.inquiries.filter(i=>['new','waiting_owner','owner_replied'].includes(i.status)).length;},
-  get inquiryProperty(){return this.properties.find(p=>p.id===this.inquiryPropertyId);},
+  inquiryProperty(){return this.properties.find(p=>p.id===this.inquiryPropertyId);},
   viewingProperty(){return this.properties.find(p=>p.id===this.viewingPropertyId);},
   visibleAdminTabs(){
     const role=this.sessionUser?.role;
