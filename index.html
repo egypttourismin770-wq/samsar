@@ -849,6 +849,7 @@ img{max-width:100%}
       <p class="muted">{{ authMode === 'signup' ? 'أنشئ حسابًا حقيقيًا على منصة سمسار.' : 'سجّل الدخول بحسابك المسجل على سمسار.' }}</p>
       <form @submit.prevent="login" class="login-form">
         <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
+        <label v-if="authMode === 'signup'">رقم الهاتف (اختياري)<input v-model.trim="signupPhone" type="tel" maxlength="25" autocomplete="tel" /></label>
         <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required autocomplete="username" /></label>
         <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="authMode === 'signup' ? 'new-password' : 'current-password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
@@ -976,6 +977,7 @@ data() {
     loginOpen:false,
     authMode:'signin',
     signupName:'',
+    signupPhone:'',
     loginForm:{email:'',password:''},
     loginError:'',
     backendAvailable:!!supabaseClient,
@@ -1256,7 +1258,7 @@ methods:{
     try{
       if(this.authMode==='signup'){
         if(this.signupName.trim().length<2){this.loginError='اكتب اسمك بالكامل.';return;}
-        const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim()}}});if(error)throw error;
+        const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim()||null}}});if(error)throw error;
         if(data.session){await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast('تم إنشاء الحساب. حسابك يبدأ كعميل.');}
         else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
       }else{
