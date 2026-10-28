@@ -1004,8 +1004,8 @@ img{max-width:100%}
 
   <div v-if="loginOpen" class="overlay" :class="{'workspace-login':['admin','employees','settings','staff'].includes(adminRouteMode)}" @click.self="closeLogin">
     <section class="modal login-modal">
-      <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>{{ ['admin','employees','settings','staff'].includes(adminRouteMode) ? 'دخول مساحة الإدارة' : 'تسجيل الدخول' }}</h2></div><button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="close-button" @click="closeLogin">✕</button></div>
-      <p class="muted">{{ authMode === 'signup' ? 'أنشئ حسابًا حقيقيًا على منصة سمسار.' : 'سجّل الدخول بحسابك المسجل على سمسار.' }}</p>
+      <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>{{ adminRouteMode === 'staff' ? 'دخول مساحة الموظفين' : (['admin','employees','settings'].includes(adminRouteMode) ? 'دخول مساحة الإدارة' : 'تسجيل الدخول') }}</h2></div><button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="close-button" @click="closeLogin">✕</button></div>
+      <p class="muted">{{ adminRouteMode === 'staff' ? 'أدخل البريد الإلكتروني وكلمة المرور اللذين أنشأهما لك مدير النظام.' : (['admin','employees','settings'].includes(adminRouteMode) ? 'سجّل الدخول بحساب الأدمن المعتمد.' : (authMode === 'signup' ? 'أنشئ حسابًا حقيقيًا على منصة سمسار.' : 'سجّل الدخول بحسابك المسجل على سمسار.')) }}</p>
       <form @submit.prevent="login" class="login-form">
         <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
         <label v-if="authMode === 'signup'">رقم الهاتف *<input v-model.trim="signupPhone" type="tel" required maxlength="25" autocomplete="tel" /></label>
@@ -1014,9 +1014,9 @@ img{max-width:100%}
         <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="authMode === 'signup' ? 'new-password' : 'current-password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
         <button type="submit" class="primary-button full-width">{{ authMode === 'signup' ? 'إنشاء حساب' : 'دخول للحساب' }}</button>
-        <button type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
+        <button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
       </form>
-      <p class="hint">{{ signupRequestedRole==='owner' ? 'سيتم تسجيل طلب حساب صاحب عقار، وتُعتمد صلاحية المالك من الإدارة قبل نشر إعلانات حقيقية.' : 'الحساب الجديد يبدأ بصلاحية عميل، ولا يمكن تغيير الصلاحية إلى مالك أو موظف إلا من الإدارة.' }}</p>
+      <p v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="hint">{{ signupRequestedRole==='owner' ? 'سيتم تسجيل طلب حساب صاحب عقار، وتُعتمد صلاحية المالك من الإدارة قبل نشر إعلانات حقيقية.' : 'الحساب الجديد يبدأ بصلاحية عميل، ولا يمكن تغيير الصلاحية إلى مالك أو موظف إلا من الإدارة.' }}</p>
     </section>
   </div>
 
@@ -1126,6 +1126,7 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'staff'" class="admin-content staff-management">
             <div class="row-between staff-heading"><div><h3>إدارة فريق العمل والصلاحيات</h3><p class="muted">بطاقة مستقلة لكل موظف، والصلاحيات تتحدد لكل حساب على حدة.</p></div><button class="outline-light-button" @click="loadBackendProfiles">تحديث البيانات</button></div>
+            <section class="staff-panel" style="margin:18px 0;padding:18px;border:1px solid #d9e7dc;border-radius:16px;background:#fff"><h4 style="margin:0 0 8px">＋ إنشاء حساب موظف جديد</h4><p class="muted">الحساب يُنشأ من الأدمن فقط، ويستطيع الموظف بعد ذلك الدخول من رابط مساحة الموظفين.</p><form class="login-form" @submit.prevent="createStaffAccount"><label>اسم الموظف<input v-model.trim="newStaffForm.full_name" required minlength="2" maxlength="100" /></label><label>رقم الهاتف<input v-model.trim="newStaffForm.phone" required minlength="7" maxlength="25" type="tel" /></label><label>البريد الإلكتروني للموظف<input v-model.trim="newStaffForm.email" required type="email" autocomplete="off" /></label><label>كلمة مرور مؤقتة (8 أحرف على الأقل)<input v-model="newStaffForm.password" required minlength="8" type="password" autocomplete="new-password" /></label><div class="staff-permission-list"><strong>صلاحيات البداية</strong><label class="checkbox-line"><input type="checkbox" v-model="newStaffForm.listings_review" /><span>مراجعة الإعلانات</span></label><label class="checkbox-line"><input type="checkbox" v-model="newStaffForm.viewings" /><span>طلبات المعاينة</span></label><label class="checkbox-line"><input type="checkbox" v-model="newStaffForm.inquiries" /><span>استفسارات العملاء</span></label><label class="checkbox-line"><input type="checkbox" v-model="newStaffForm.ai_assistant" /><span>مساعد الموظفين الذكي</span></label><label class="checkbox-line"><input type="checkbox" v-model="newStaffForm.operations" /><span>المهام التشغيلية</span></label></div><button class="primary-button" type="submit" :disabled="staffCreateBusy">{{ staffCreateBusy ? 'جارٍ إنشاء الحساب…' : 'إنشاء حساب الموظف' }}</button></form></section>
             <div class="staff-summary-grid">
               <div class="staff-summary-card"><span>إجمالي الموظفين</span><strong>{{ backendProfiles.filter(item => item.role === 'staff').length }}</strong></div>
               <div class="staff-summary-card"><span>صلاحية الاستفسارات</span><strong>{{ backendProfiles.filter(item => item.role === 'staff' && item.staff_permissions?.inquiries === true).length }}</strong></div>
@@ -1147,7 +1148,7 @@ img{max-width:100%}
                 <div class="staff-card-footer"><span class="muted">الحفظ مباشر في قاعدة البيانات</span><span v-if="roleUpdateBusyId===profile.id" class="status-pill pending">جارٍ الحفظ…</span></div>
               </article>
             </div>
-            <div v-if="!backendProfiles.some(item => item.role === 'staff')" class="empty-state">لا توجد حسابات موظفين حتى الآن. من تبويب «المستخدمون» عيّن حسابًا موجودًا كموظف.</div>
+            <div v-if="!backendProfiles.some(item => item.role === 'staff')" class="empty-state">لا توجد حسابات موظفين حتى الآن. يمكنك إنشاء أول حساب من النموذج أعلاه.</div>
             <div v-else-if="!backendProfiles.filter(item => item.role === 'staff').some(item => !staffSearch || [item.full_name,item.phone,item.whatsapp_phone].some(value => String(value || '').toLocaleLowerCase('ar').includes(staffSearch.toLocaleLowerCase('ar'))))" class="empty-state">لا توجد نتائج مطابقة للبحث.</div>
             <div class="policy-note">الأمان: صلاحيات الموظفين لا تمنحهم صلاحية مدير النظام. اختبر كل حساب موظف بعد تغيير الصلاحيات للتأكد من أن الوصول مطابق للخيارات المحددة.</div>
           </div>
@@ -1302,6 +1303,8 @@ data() {
     authSubscription:null,
     backendProfiles:[],
     roleUpdateBusyId:'', staffSearch:'',
+    newStaffForm:{full_name:'',phone:'',email:'',password:'',inquiries:false,viewings:true,ai_assistant:false,listings_review:true,operations:false},
+    staffCreateBusy:false,
     selectedProperty:null,
     viewingOpen:false,
     viewingPropertyId:'',
@@ -1797,7 +1800,22 @@ methods:{
     catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
     finally{this.roleUpdateBusyId='';}
   },
-  async updateStaffPermission(profile,permission,enabled){
+  async createStaffAccount(){
+    if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser){this.toast('إنشاء حساب موظف متاح للأدمن فقط.');return;}
+    const form={...this.newStaffForm};
+    if(form.full_name.trim().length<2||form.phone.trim().length<7||form.password.length<8){this.toast('راجع الاسم والهاتف وكلمة المرور.');return;}
+    this.staffCreateBusy=true;
+    try{
+      const {data,error}=await supabaseClient.functions.invoke('admin-create-staff',{body:{full_name:form.full_name.trim(),phone:form.phone.trim(),email:form.email.trim().toLowerCase(),password:form.password,permissions:{inquiries:form.inquiries,viewings:form.viewings,ai_assistant:form.ai_assistant,listings_review:form.listings_review,operations:form.operations}}});
+      if(error)throw error;
+      if(data?.error)throw new Error(data.error);
+      this.newStaffForm={full_name:'',phone:'',email:'',password:'',inquiries:false,viewings:true,ai_assistant:false,listings_review:true,operations:false};
+      await this.loadBackendProfiles();
+      this.toast('تم إنشاء حساب الموظف وتطبيق صلاحياته. أرسل له البريد وكلمة المرور المؤقتة بأمان.');
+    }catch(error){console.error('Staff account creation failed:',error);this.toast(error?.message||'تعذر إنشاء حساب الموظف. راجع إعدادات Supabase ثم حاول مرة أخرى.');}
+    finally{this.staffCreateBusy=false;}
+  },
+  async updateStaffPermission(profile,permission,enabled)
     if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser||profile?.role!=='staff')return;
     const allowed=['inquiries','viewings','ai_assistant','listings_review','operations'];
     if(!allowed.includes(permission)){this.toast('الصلاحية غير معروفة.');return;}
@@ -1852,6 +1870,7 @@ methods:{
   },
   openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
   async login(){
+    if(['admin','employees','settings','staff'].includes(this.adminRouteMode)&&this.authMode==='signup'){this.authMode='signin';this.loginError='إنشاء الحسابات من هذه البوابة غير مسموح. اطلب من الأدمن إنشاء حسابك.';return;}
     if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
     const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password;this.loginError='';
     try{
