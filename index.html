@@ -831,14 +831,14 @@ img{max-width:100%}
   <!-- المساعد الذكي للعملاء -->
   <button class="assistant-fab" @click="assistantOpen = !assistantOpen"><span>🤖</span> المساعد الذكي</button>
   <div v-if="assistantOpen" class="assistant-panel">
-    <div class="assistant-header"><span class="robot-avatar">🤖</span><div><strong>المساعد الذكي</strong><small>مساعد استكشاف تجريبي</small></div><button @click="assistantOpen=false">✕</button></div>
+    <div class="assistant-header"><span class="robot-avatar">🤖</span><div><strong>المساعد الذكي</strong><small>{{ aiSettings.enabled ? 'المساعد الخارجي حسب إعدادات الربط' : 'المساعد الخارجي غير مفعّل بعد' }}</small></div><button @click="assistantOpen=false">✕</button></div>
     <div class="assistant-messages">
       <div class="bot-message">أهلًا بيك! قول لي بتدور على إيه، زي شقة للإيجار أو عقار للبيع في القاهرة.</div>
       <div v-for="(message,index) in assistantMessages" :key="index" :class="message.from === 'user' ? 'user-message' : 'bot-message'">{{ message.text }}</div>
     </div>
     <div class="assistant-shortcuts"><button @click="quickAsk('شقة للإيجار')">شقة للإيجار</button><button @click="quickAsk('عقار للبيع')">عقار للبيع</button><button @click="quickAsk('إزاي أطلب معاينة؟')">طلب معاينة</button></div>
-    <form class="assistant-input" @submit.prevent="askAssistant"><input v-model.trim="assistantInput" maxlength="300" placeholder="اكتب مواصفات عقارك..." /><button type="submit">➤</button></form>
-    <small class="assistant-note">المساعد يعمل بقواعد محلية تجريبية، وليس متصلًا بنموذج AI خارجي.</small>
+    <form class="assistant-input" @submit.prevent="askAssistant"><input v-model.trim="assistantInput" maxlength="1200" placeholder="اكتب سؤالك عن العقار أو متطلباتك..." /><button type="submit" :disabled="assistantBusy">{{ assistantBusy ? '…' : '➤' }}</button></form>
+    <small class="assistant-note">{{ assistantPropertyId ? 'المحادثة مرتبطة بإعلان محدد؛ لا يتم عرض هاتف المالك.' : 'لا يدخل رقم المالك أو معلومات الاتصال الخاصة في سياق المساعد.' }}</small>
   </div>
 
   <!-- تفاصيل العقار والتقييم -->
@@ -1617,22 +1617,37 @@ methods:{
   },
   statusClass(status){if(['تمت الموافقة من المالك','تم قبول الموعد البديل','اكتملت المعاينة'].includes(status))return 'good';if(['مرفوضة من المالك','ملغاة من العميل','موقوف'].includes(status))return 'bad';if(['بانتظار موافقة المالك','موعد بديل مقترح','قيد المراجعة التجريبية'].includes(status))return 'pending';return '';},
   goToNotification(item){this.notificationsOpen=false;if(this.sessionUser?.role==='owner')this.scrollTo('owner-workspace');else if(['admin','staff'].includes(this.sessionUser?.role))this.openAdmin();else this.scrollTo('my-viewings');},
+  askAIForProperty(property){
+    this.assistantPropertyId=property?.id||'';
+    this.assistantOpen=true;
+    this.selectedProperty=null;
+    if(property?.isDemo)this.assistantMessages.push({from:'bot',text:'تنبيه: الإعلان الحالي توضيحي للتجربة وليس عقارًا متاحًا فعليًا.'});
+    this.assistantMessages.push({from:'bot',text:property?'اسألني عن تفاصيل الإعلان: '+property.title+' — '+property.area+'.':'اسألني عن العقارات المنشورة في سمسار.'});
+  },
   quickAsk(text){this.assistantInput=text;this.askAssistant();},
-  askAssistant(){
-    const question=this.assistantInput.trim();if(!question)return;
-    this.assistantMessages.push({from:'user',text:question});
-    const q=question.toLocaleLowerCase('ar');
-    let reply='استخدم البحث وحدد المنطقة والميزانية ونوع العقار. البيانات الظاهرة تجريبية.';
-    if(q.includes('إيجار')||q.includes('للايجار')||q.includes('للإيجار')){this.filters.transaction='إيجار';reply='عرضت لك العقارات المتاحة للإيجار حسب بيانات المعاينة. يمكنك اختيار المنطقة ونوع العقار.';}
-    else if(q.includes('بيع')||q.includes('للبيع')){this.filters.transaction='بيع';reply='عرضت لك العقارات المعروضة للبيع. استخدم الفلاتر لمزيد من التحديد.';}
-    else if(q.includes('معاينة'))reply='افتح تفاصيل العقار واضغط «طلب معاينة العقار». سجّل الدخول بحساب العميل التجريبي. هذه ليست حجوزات فعلية.';
-    else if(q.includes('تقييم'))reply='التقييمات في هذه النسخة محلية وتجريبية. افتح تفاصيل العقار وسجّل الدخول بحساب العميل لتجربة التقييم.';
-    else{
-      const area=this.availableAreas.find(a=>q.includes(a.toLocaleLowerCase('ar')));
-      if(area){this.filters.area=area;reply='تم تحديد المنطقة: '+area+'.';}
-    }
-    this.assistantMessages.push({from:'bot',text:reply});this.assistantInput='';
-    if(q.includes('إيجار')||q.includes('بيع'))this.scrollTo('properties');
+  async askAssistant(){
+    const question=this.assistantInput.trim();if(!question||this.assistantBusy)return;
+    this.assistantMessages.push({from:'user',text:question});this.assistantInput='';this.assistantBusy=true;
+    try{
+      if(this.sessionUser?.isSupabaseUser&&supabaseClient&&this.aiSettings?.enabled){
+        const channel=['staff','admin'].includes(this.sessionUser.role)?'staff':'customer';
+        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:question,propertyId:this.assistantPropertyId||null,conversationId:this.assistantConversationId||null,channel}});
+        if(error)throw error;
+        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantMessages.push({from:'bot',text:data.reply});return;}
+      }
+      const q=question.toLocaleLowerCase('ar');let reply='استخدم البحث وحدد المنطقة والميزانية ونوع العقار. المعروض حاليًا يتضمن بيانات توضيحية معلّمة كتجريبية.';
+      if(q.includes('إيجار')||q.includes('للايجار')||q.includes('للإيجار')){this.filters.transaction='إيجار';reply='عرضت لك العقارات المصنفة للإيجار. راجع شارة «عرض تجريبي» قبل اعتبار أي إعلان متاحًا.';}
+      else if(q.includes('بيع')||q.includes('للبيع')){this.filters.transaction='بيع';reply='عرضت لك العقارات المصنفة للبيع. راجع شارة «عرض تجريبي» قبل اعتبار أي إعلان متاحًا.';}
+      else if(q.includes('معاينة'))reply='لطلب معاينة حقيقية، اختر إعلانًا منشورًا غير تجريبي وسجّل الدخول بحساب العميل.';
+      else if(q.includes('تقييم'))reply='التقييمات المعروضة حاليًا توضيحية، وليست مراجعات عملاء حقيقية.';
+      else if(this.assistantPropertyId){const property=this.getProperty(this.assistantPropertyId);reply=property?'بيانات الإعلان: '+property.title+'، '+property.area+' — '+property.neighborhood+'، '+property.size+' م²، '+this.money(property.price)+'. '+(property.isDemo?'هذا إعلان تجريبي غير متاح للحجز.':'لأي استفسار، استخدم «استفسار عبر سمسار» ليُراجعه الموظفون دون كشف رقم المالك.'):'لم أجد الإعلان المحدد؛ اختر عقارًا من القائمة.';}
+      this.assistantMessages.push({from:'bot',text:reply});
+      if(this.aiSettings?.enabled&&this.sessionUser?.isSupabaseUser)this.assistantMessages.push({from:'bot',text:'لم يكتمل الاتصال الخارجي؛ راجع إعداد مفتاح API في Supabase. الرد الحالي محلي ومؤقت.'});
+      if(q.includes('إيجار')||q.includes('بيع'))this.scrollTo('properties');
+    }catch(error){
+      console.error('Samsar AI call failed:',error);
+      this.assistantMessages.push({from:'bot',text:'خدمة الذكاء الاصطناعي الخارجية غير جاهزة أو لم يتم ضبط مفتاحها بعد. يمكنك متابعة البحث، ولن نعرض اتصالًا خارجيًا على أنه تم بنجاح.'});
+    }finally{this.assistantBusy=false;}
   },
   askStaffAssistant(){
     const q=this.staffAssistantInput.trim().toLocaleLowerCase('ar');if(!q)return;
