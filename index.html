@@ -1371,7 +1371,7 @@ computed:{
     const role=this.sessionUser?.role;
     return this.adminTabs.filter(t=>{
       if(!t.roles.includes(role))return false;
-      if(role==='admin'&&this.adminRouteMode==='admin'&&t.id==='staff')return false;
+      if(role==='admin'&&this.adminRouteMode==='admin'&&(t.id==='settings'||t.id==='staff'))return false;
       if(role==='admin'&&this.adminRouteMode==='settings')return t.id==='settings';
       if(role==='admin'&&this.adminRouteMode==='employees')return t.id==='staff';
       if(role!=='staff')return true;
