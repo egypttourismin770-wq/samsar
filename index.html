@@ -531,7 +531,6 @@ img{max-width:100%}
 .admin-standalone .admin-layout,.staff-standalone .admin-layout{flex:1;min-height:0}
 .admin-standalone .admin-main,.staff-standalone .admin-main{min-height:0;overflow:auto}
 .admin-standalone .admin-header,.staff-standalone .admin-header{border-radius:0!important}
-.admin-standalone .admin-bottom button[ @click="closeAdmin" ],.staff-standalone .admin-bottom button[ @click="closeAdmin" ]{display:none!important}
 .admin-standalone .admin-sidebar{background:linear-gradient(180deg,#75420b,#3f270c)}
 .admin-standalone .admin-sidebar button.active{background:linear-gradient(110deg,#f2c66b,#9a5a0c);color:#fff}
 .admin-standalone .admin-header{background:linear-gradient(115deg,#fff9e9,#f3dca8)}
@@ -753,7 +752,7 @@ img{max-width:100%}
           <div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div>
           <p><strong>رقم الطلب:</strong> {{ request.id.slice(0,8).toUpperCase() }}</p>
           <p><strong>السعر:</strong> {{ money(getProperty(request.propertyId)?.price) }}</p>
-          <p><strong>العنوان:</strong> {{ getProperty(request.propertyId)?.area || '—' }}، {{ getProperty(request.propertyId)?.neighborhood || '—' }}</p>
+          <p><strong>العنوان:</strong> {{ getProperty(request.propertyId)?.address || getProperty(request.propertyId)?.area || '—' }}</p>
           <p>الموعد المطلوب: {{ request.date }} — {{ request.time }}</p>
           <p v-if="request.alternateDate">الموعد البديل: {{ request.alternateDate }} — {{ request.alternateTime }}</p>
           <div class="inline-actions">
@@ -762,7 +761,7 @@ img{max-width:100%}
           </div>
         </article>
       </div>
-      <div v-else class="empty-state">لسه ما قدمتش طلبات معاينة.</div>
+      <div v-else class="empty-state">{{ customerOrderLookup ? 'مش لاقيين طلب بالرقم ده في حسابك.' : 'لسه ما قدمتش طلبات معاينة.' }}</div>
     </section>
 
     <!-- استفسارات العميل المسجلة على حسابه -->
@@ -1585,7 +1584,7 @@ methods:{
     return {id:row.id,listingCode:row.listing_code,isBackendRecord:true,isDemo:!!row.is_demo,ownerId:row.owner_id,ownerFeeStatus:row.owner_fee_status,
       title:sanitizePublicPropertyText(row.title),description:sanitizePublicPropertyText(row.description||''),transaction:row.listing_type==='rent'?'إيجار':'بيع',type:typeNames[row.property_type]||'أخرى',
       price:Number(row.listing_type==='rent'?row.monthly_rent_egp:row.sale_price_egp)||0,suggestedPrice:Number(row.suggested_price_egp)||0,
-      area:row.governorate||row.city||'',neighborhood:row.district||'',size:Number(row.area_sqm)||0,bedrooms:Number(row.bedrooms)||0,bathrooms:Number(row.bathrooms)||0,
+      area:row.governorate||row.city||'',neighborhood:row.district||'',address:row.address_text||[row.governorate,row.city,row.district].filter(Boolean).join('، '),size:Number(row.area_sqm)||0,bedrooms:Number(row.bedrooms)||0,bathrooms:Number(row.bathrooms)||0,
       contractDetails:sanitizePublicPropertyText(row.contract_details||''),mapUrl:row.map_url||'',amenities,photos:images,ownerEmail:row.owner_id===this.sessionUser?.id?this.sessionUser?.email||'':'',
       ownerName:row.is_demo?'إعلان تجريبي':(row.owner?.full_name||(row.owner_id===this.sessionUser?.id?this.sessionUser?.name:'')||'مالك العقار'),featured:false,status:statusNames[row.status]||row.status,backendStatus:row.status,
       rating:0,reviews:0,identityDocName:'',ownershipDocName:'',createdAt:row.created_at,publishedAt:row.published_at,verifiedAt:row.verified_at};
