@@ -952,15 +952,6 @@ return [
 ];
 }
 
-function defaultAccounts() {
-return [
-  {role:'admin',label:'الإدارة',email:'admin@samsar.demo',password:'Admin123!',name:'مدير النظام'},
-  {role:'staff',label:'موظف',email:'staff@samsar.demo',password:'Staff123!',name:'موظف المتابعة'},
-  {role:'customer',label:'عميل',email:'customer@samsar.demo',password:'Client123!',name:'عميل تجريبي'},
-  {role:'owner',label:'مالك',email:'owner@samsar.demo',password:'Owner123!',name:'مالك تجريبي'}
-];
-}
-
 function defaultSettings() {
 return {name:'سمسار',tagline:'منصتك لاكتشاف العقارات المناسبة وتنظيم طلبات المعاينة بسهولة.',primaryColor:'#075c59',accentColor:'#12a69a',backgroundColor:'#faf7ef'};
 }
@@ -1218,7 +1209,8 @@ methods:{
       customerName:row.customer_name||'',phone:row.customer_phone||'',date:scheduled.date,time:scheduled.time,note:row.customer_note||'',ownerNote:row.owner_note||'',
       alternateDate:alternate.date,alternateTime:alternate.time,ownerProposedScheduledAt:row.owner_proposed_scheduled_at||'',status:states[row.status]||row.status,backendStatus:row.status,isBackendRecord:true,createdAt:new Date(row.created_at).getTime()||0};});
   },
-  getProperty(id){  openProperty(property){this.selectedProperty=property;},
+  getProperty(id){return this.properties.find(p=>p.id===id);},
+  openProperty(property){this.selectedProperty=property;},
   toggleFavorite(id){
     const p=this.getProperty(id);
     const i=this.favorites.indexOf(id);
@@ -1240,11 +1232,6 @@ methods:{
     this.toast('تم حفظ تقييمك محليًا.');
   },
   openLogin(){this.loginError='';this.loginOpen=true;},
-  fillDemo(role){
-    const account=this.demoAccounts.find(a=>a.role===role);
-    if(account)this.loginForm={email:account.email,password:account.password};
-    this.loginError='';
-  },
   async login(){
     if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
     const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password;this.loginError='';
