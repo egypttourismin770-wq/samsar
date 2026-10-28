@@ -970,7 +970,7 @@ img{max-width:100%}
   <!-- تفاصيل العقار والتقييم -->
   <div v-if="selectedProperty" class="overlay" @click.self="selectedProperty=null">
     <section class="modal property-modal">
-      <div class="modal-heading"><div><span class="eyebrow">{{ selectedProperty.transaction }} · {{ selectedProperty.type }}</span><h2>{{ selectedProperty.title }}</h2><p>⌖ {{ selectedProperty.area }} — {{ selectedProperty.neighborhood }}</p></div><button class="close-button" @click="selectedProperty=null">✕</button></div>
+      <div class="modal-heading"><div><span class="eyebrow">{{ selectedProperty.transaction }} · {{ selectedProperty.type }} · رقم العقار {{ propertyCode(selectedProperty) }}</span><h2>{{ selectedProperty.title }}</h2><p>⌖ {{ selectedProperty.area }} — {{ selectedProperty.neighborhood }}</p></div><button class="close-button" @click="selectedProperty=null">✕</button></div>
       <div class="detail-gallery"><img v-for="(photo,index) in selectedProperty.photos" :key="photo.key || photo + index" :src="photo.src || photo" :alt="'صورة ' + (index+1)" @error="onImageError" /></div>
       <div class="detail-price"><strong>{{ money(selectedProperty.price) }}</strong><small>{{ selectedProperty.transaction === 'إيجار' ? 'شهريًا' : 'السعر الإجمالي' }}</small></div>
       <div class="detail-specs"><div><span>المساحة</span><strong>{{ selectedProperty.size }} م²</strong></div><div><span>غرف النوم</span><strong>{{ selectedProperty.bedrooms }}</strong></div><div><span>الحمامات</span><strong>{{ selectedProperty.bathrooms }}</strong></div><div><span>النوع</span><strong>{{ selectedProperty.type }}</strong></div></div>
