@@ -1627,7 +1627,9 @@ methods:{
       if(amenities.length){const {error:amenityInsertError}=await supabaseClient.from('property_amenities').insert(amenities.map(amenity_name=>({property_id:propertyId,amenity_name,category:'general',distance_meters:null})));if(amenityInsertError)throw amenityInsertError;}
       await this.loadBackendProperties();this.cancelListingForm();
       const savedProperty=this.getProperty(propertyId);
-      if(savedProperty?.ownerFeeStatus!=='paid'){
+      if(savedProperty?.ownerFeeStatus==='pending'){
+        this.toast('تم حفظ المسودة وإثبات الدفع قيد المراجعة. لن تحتاج لإرسال دفعة أخرى قبل قرار الإدارة.');
+      }else if(savedProperty?.ownerFeeStatus!=='paid'){
         this.pendingPaymentPropertyId=propertyId;this.selectedPaymentMethodId='';this.paymentReceiptFile=null;this.paymentReceiptName='';this.paymentPayerReference='';
         this.listingPaymentOpen=true;await this.loadAvailablePaymentMethods();
         this.toast('تم حفظ المسودة. أكمل رسوم إنشاء الإعلان البالغة '+this.money(this.paymentPolicy.owner_listing_fee_egp)+' ثم انتظر مراجعة الإدارة.');
