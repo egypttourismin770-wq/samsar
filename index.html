@@ -1032,6 +1032,7 @@ data() {
     staffAssistantInput:'',
     staffAssistantReply:'',
     adminOpen:false,
+    adminRouteMode:'',
     adminTab:'overview',
     listingChartFilter:'all',
     listingFormOpen:false,
@@ -1216,10 +1217,14 @@ methods:{
     }catch(error){console.error('Samsar backend initialization failed:',error);this.backendError='تعذر الاتصال بقاعدة البيانات حاليًا؛ البيانات الظاهرة قد تكون تجريبية.';}
   },
   handleDashboardDeepLink(){
-    if(!new URLSearchParams(window.location.search).has('dashboard'))return;
+    const params=new URLSearchParams(window.location.search);
+    const route=params.has('admin')?'admin':(params.has('staff')?'staff':(params.has('dashboard')?'dashboard':''));
+    if(!route)return;
     if(!this.sessionUser){this.openLogin();return;}
-    if(['admin','staff'].includes(this.sessionUser.role)){this.adminOpen=true;this.adminTab='overview';}
-    else this.toast('لوحة الإدارة متاحة لحساب الإدارة أو الموظف المعتمد فقط.');
+    if(route==='admin'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.toast('هذا الرابط مخصص لمدير النظام فقط.');return;}
+    if(route==='staff'&&this.sessionUser.role!=='staff'){this.adminOpen=false;this.toast('هذا الرابط مخصص لحساب الموظف المعتمد فقط.');return;}
+    if(route==='dashboard'&&!['admin','staff'].includes(this.sessionUser.role)){this.adminOpen=false;this.toast('لوحة العمل متاحة للمدير والموظف المعتمد فقط.');return;}
+    this.adminRouteMode=route;this.adminOpen=true;this.adminTab='overview';
   },
   async syncAuthSession(session){
     if(!session?.user){if(this.sessionUser?.isSupabaseUser)this.sessionUser=null;return;}
@@ -1489,6 +1494,7 @@ methods:{
   },
   openAdmin(){
     if(!this.sessionUser||!['admin','staff'].includes(this.sessionUser.role)){this.openLogin();this.toast('سجّل الدخول بحساب مدير النظام أو الموظف المعتمد.');return;}
+    this.adminRouteMode=this.sessionUser.role==='admin'?'admin':'staff';
     this.adminOpen=true;
     const valid=this.visibleAdminTabs.map(t=>t.id);
     if(!valid.includes(this.adminTab))this.adminTab=valid[0]||'overview';
