@@ -1585,35 +1585,54 @@ methods:{
   async loadPublicSettings(){
     if(!supabaseClient)return;
     try{
-      const {data,error}=await supabaseClient.from('platform_settings').select('setting_key,setting_value').in('setting_key',['site_brand_settings','whatsapp_public_number']);
+      const keys=['site_brand_settings','whatsapp_public_number','site_contact_settings','ai_connection_settings','owner_listing_fee_egp','customer_service_fee_egp','refund_customer_percent','refund_support_percent'];
+      const {data,error}=await supabaseClient.from('platform_settings').select('setting_key,setting_value').in('setting_key',keys);
       if(error)throw error;
       const rows=Array.isArray(data)?data:[];
-      const brand=rows.find(row=>row.setting_key==='site_brand_settings')?.setting_value;
-      const phone=rows.find(row=>row.setting_key==='whatsapp_public_number')?.setting_value;
-      if(brand&&typeof brand==='object'&&!Array.isArray(brand)){
-        this.settings={...this.settings,...brand};
-      }
+      const read=key=>rows.find(row=>row.setting_key===key)?.setting_value;
+      const brand=read('site_brand_settings');
+      const phone=read('whatsapp_public_number');
+      const contacts=read('site_contact_settings');
+      const ai=read('ai_connection_settings');
+      if(brand&&typeof brand==='object'&&!Array.isArray(brand))this.settings={...this.settings,...brand};
       this.settings.whatsappPhone=typeof phone==='string'?phone:'';
+      if(contacts&&typeof contacts==='object'&&!Array.isArray(contacts))this.siteContactSettings={...this.siteContactSettings,...contacts};
+      if(ai&&typeof ai==='object'&&!Array.isArray(ai))this.aiSettings={...this.aiSettings,...ai};
+      this.paymentPolicy={
+        owner_listing_fee_egp:Number(read('owner_listing_fee_egp')??this.paymentPolicy.owner_listing_fee_egp),
+        customer_service_fee_egp:Number(read('customer_service_fee_egp')??this.paymentPolicy.customer_service_fee_egp),
+        refund_customer_percent:Number(read('refund_customer_percent')??this.paymentPolicy.refund_customer_percent),
+        refund_support_percent:Number(read('refund_support_percent')??this.paymentPolicy.refund_support_percent)
+      };
     }catch(error){console.warn('تعذر تحميل إعدادات المنصة العامة:',error);}
   },
   async saveSettings(){
+    if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser){this.toast('إعدادات المنصة متاحة لمدير النظام فقط.');return;}
     this.settings.name=this.settings.name.trim()||'سمسار';
     const phone=this.normalizeWhatsAppNumber(this.settings.whatsappPhone);
     if(phone&&!/^[0-9]{8,15}$/.test(phone)){this.toast('رقم واتساب غير صحيح. اكتب الرقم الدولي من 8 إلى 15 رقمًا.');return;}
+    if(this.aiSettings.enabled&&(!this.aiSettings.base_url||!this.aiSettings.model)){this.toast('أدخل عنوان API واسم النموذج قبل تفعيل المساعد الخارجي.');return;}
+    if(this.aiSettings.base_url&&!/^https:\/\//i.test(this.aiSettings.base_url)){this.toast('عنوان API يجب أن يبدأ بـ https://');return;}
+    const feeValues=[this.paymentPolicy.owner_listing_fee_egp,this.paymentPolicy.customer_service_fee_egp,this.paymentPolicy.refund_customer_percent,this.paymentPolicy.refund_support_percent].map(Number);
+    if(feeValues.some(v=>!Number.isFinite(v)||v<0)||Number(this.paymentPolicy.refund_customer_percent)+Number(this.paymentPolicy.refund_support_percent)!==100){this.toast('راجع الرسوم ونسب الاسترداد؛ مجموع نسب الاسترداد والخدمة يجب أن يساوي 100%.');return;}
     this.settings.whatsappPhone=phone;
     this.persistDemo();
-    if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){
-      this.toast('تم حفظ شكل الموقع على هذا المتصفح فقط؛ لا يمكن حفظ رقم واتساب مركزيًا بدون دخول المدير.');
-      return;
-    }
     try{
-      const {error}=await supabaseClient.from('platform_settings').upsert([
+      const updates=[
         {setting_key:'site_brand_settings',setting_value:{name:this.settings.name,tagline:this.settings.tagline,primaryColor:this.settings.primaryColor,accentColor:this.settings.accentColor,backgroundColor:this.settings.backgroundColor},description:'إعدادات الهوية العامة لواجهة سمسار'},
-        {setting_key:'whatsapp_public_number',setting_value:phone,description:'رقم واتساب الرسمي لاستقبال استفسارات العملاء بصيغة دولية دون علامة + أو مسافات'}
-      ],{onConflict:'setting_key'});
+        {setting_key:'whatsapp_public_number',setting_value:phone,description:'رقم واتساب الرسمي لاستقبال استفسارات العملاء بصيغة دولية دون علامة + أو مسافات'},
+        {setting_key:'site_contact_settings',setting_value:{facebook_url:(this.siteContactSettings.facebook_url||'').trim(),official_website_url:(this.siteContactSettings.official_website_url||'').trim(),qr_target_url:(this.siteContactSettings.qr_target_url||'').trim()},description:'روابط التواصل الرسمية ورابط QR لموقع سمسار'},
+        {setting_key:'ai_connection_settings',setting_value:{enabled:!!this.aiSettings.enabled,provider:this.aiSettings.provider||'openai-compatible',base_url:(this.aiSettings.base_url||'').trim().replace(/\/+$/,''),model:(this.aiSettings.model||'').trim()},description:'إعدادات عنوان ونموذج مزود الذكاء الاصطناعي؛ المفتاح السري يحفظ كـ Edge Function Secret'},
+        {setting_key:'owner_listing_fee_egp',setting_value:Number(this.paymentPolicy.owner_listing_fee_egp),description:'رسوم نشر إعلان المالك بالجنيه المصري'},
+        {setting_key:'customer_service_fee_egp',setting_value:Number(this.paymentPolicy.customer_service_fee_egp),description:'رسوم خدمة العميل بالجنيه المصري'},
+        {setting_key:'refund_customer_percent',setting_value:Number(this.paymentPolicy.refund_customer_percent),description:'نسبة الاسترداد للعميل في الحالات المؤهلة'},
+        {setting_key:'refund_support_percent',setting_value:Number(this.paymentPolicy.refund_support_percent),description:'النسبة المحتفظ بها كرسوم دعم في الحالات المؤهلة'}
+      ];
+      const {error}=await supabaseClient.from('platform_settings').upsert(updates,{onConflict:'setting_key'});
       if(error)throw error;
-      this.toast('تم حفظ إعدادات الهوية ورقم واتساب مركزيًا في قاعدة البيانات.');
-    }catch(error){console.error('تعذر حفظ إعدادات المنصة:',error);this.toast('تم حفظ الإعدادات على هذا المتصفح، لكن تعذر حفظها مركزيًا في قاعدة البيانات.');}
+      await this.loadPublicSettings();
+      this.toast('تم حفظ إعدادات الهوية والتواصل والذكاء الاصطناعي والسياسات مركزيًا.');
+    }catch(error){console.error('تعذر حفظ إعدادات المنصة:',error);this.toast('تعذر حفظ بعض الإعدادات في قاعدة البيانات. راجع اتصال Supabase.');}
   },
   statusClass(status){if(['تمت الموافقة من المالك','تم قبول الموعد البديل','اكتملت المعاينة'].includes(status))return 'good';if(['مرفوضة من المالك','ملغاة من العميل','موقوف'].includes(status))return 'bad';if(['بانتظار موافقة المالك','موعد بديل مقترح','قيد المراجعة التجريبية'].includes(status))return 'pending';return '';},
   goToNotification(item){this.notificationsOpen=false;if(this.sessionUser?.role==='owner')this.scrollTo('owner-workspace');else if(['admin','staff'].includes(this.sessionUser?.role))this.openAdmin();else this.scrollTo('my-viewings');},
