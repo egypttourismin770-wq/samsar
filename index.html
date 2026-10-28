@@ -748,7 +748,7 @@ img{max-width:100%}
 
     <!-- طلبات العميل -->
     <section v-if="sessionUser && sessionUser.role === 'customer'" id="my-viewings" class="section tinted-section">
-      <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة</h2></div></div>
+      <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة ومتابعة الطلب</h2><p>حساب العميل: {{ sessionUser.name }} · الهاتف: {{ sessionUser.phone || 'غير مسجل' }} · العنوان: {{ sessionUser.address || 'غير مسجل' }}</p></div></div>
       <label class="order-lookup-label">رقم الطلب لمتابعته<input v-model.trim="customerOrderLookup" placeholder="اكتب أول 8 خانات من رقم الطلب" maxlength="36" /></label>
       <div v-if="customerViewingsForLookup.length" class="record-grid">
         <article v-for="request in customerViewingsForLookup" :key="request.id" class="record-card">
@@ -1797,11 +1797,11 @@ methods:{
         if(this.signupPhone.trim().length<7){this.loginError='اكتب رقم هاتف صحيحًا للتواصل.';return;}
         if(this.signupAddress.trim().length<4){this.loginError='اكتب عنوانك الأساسي.';return;}
         const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim(),requested_role:this.signupRequestedRole}}});if(error)throw error;
-        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء الحساب وطلب اعتمادك كصاحب عقار. الإدارة تعتمد الصلاحية قبل النشر.':'تم إنشاء حساب العميل بنجاح.');if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
+        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء الحساب وطلب اعتمادك كصاحب عقار. الإدارة تعتمد الصلاحية قبل النشر.':'تم إنشاء حساب العميل بنجاح.');if(this.signupRequestedRole==='customer')this.$nextTick(()=>this.scrollTo('my-viewings'));if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
         else{this.authMode='signin';this.toast('تم إرسال تعليمات تأكيد الحساب إلى بريدك الإلكتروني إذا كان تأكيد البريد مطلوبًا.');}
       }else{
         const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
-        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');
+        await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');if(this.trackingOpen&&this.sessionUser?.role==='customer'){this.trackingOpen=false;this.$nextTick(()=>this.scrollTo('my-viewings'));}
         if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
         else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
       }
