@@ -701,6 +701,9 @@ img{max-width:100%}
     <!-- استفسارات العميل المسجلة على حسابه -->
     <section v-if="sessionUser && sessionUser.role === 'customer'" class="section tinted-section" id="my-inquiries"><div class="section-heading"><div><span class="eyebrow">متابعة من حسابك</span><h2>استفساراتي العقارية</h2><p>كل استفسار يمر بمراجعة الموظف ثم رد المالك ثم الرد النهائي من فريق سمسار.</p></div></div><div v-if="customerInquiries.length" class="record-grid"><article v-for="inquiry in customerInquiries" :key="inquiry.id" class="inquiry-card"><h4>{{ inquiry.propertyTitle || 'العقار' }}</h4><div class="inquiry-meta"><span>الحالة: {{ inquiry.statusLabel }}</span><span>{{ new Date(inquiry.createdAt).toLocaleDateString('ar-EG') }}</span></div><div class="inquiry-message">{{ inquiry.question }}</div><div v-if="inquiry.responseToCustomer" class="inquiry-response"><strong>رد فريق سمسار:</strong><p>{{ inquiry.responseToCustomer }}</p></div></article></div><div v-else class="empty-state">لا توجد استفسارات حتى الآن. افتح عقارًا منشورًا واضغط «استفسار عبر سمسار».</div></section>
 
+    <!-- محفوظات المساعد الذكي على حساب العميل -->
+    <section v-if="sessionUser && sessionUser.role === 'customer'" class="section tinted-section" id="my-ai-conversations"><div class="section-heading"><div><span class="eyebrow">سجل حسابك</span><h2>محادثاتي مع المساعد الذكي</h2><p>المحادثات الخارجية الناجحة تُحفظ هنا مع سياق الإعلان عند توفره.</p></div><button class="outline-light-button" @click="loadAIHistory">تحديث السجل</button></div><div v-if="aiHistoryBusy" class="muted">جارٍ تحميل المحادثات...</div><div v-else-if="aiConversations.length" class="record-grid"><article v-for="conversation in aiConversations" :key="conversation.id" class="inquiry-card"><h4>{{ conversation.propertyTitle || 'محادثة بحث عامة' }}</h4><div class="inquiry-meta"><span>{{ conversation.isDemo ? 'سياق إعلان تجريبي' : conversation.propertyId ? 'مرتبطة بإعلان' : 'بحث عام' }}</span><span>{{ conversation.lastMessageAt ? new Date(conversation.lastMessageAt).toLocaleString('ar-EG') : new Date(conversation.createdAt).toLocaleString('ar-EG') }}</span></div><button class="primary-button" @click="openSavedAIConversation(conversation)">عرض المحادثة والردود</button></article></div><div v-else class="empty-state">لا توجد محادثات ذكاء اصطناعي محفوظة. بعد تهيئة المساعد الخارجي وتسجيل الدخول، ستظهر المحادثات هنا.</div></section>
+
     <!-- مساحة المالك -->
     <section v-if="sessionUser && sessionUser.role === 'owner'" id="owner-workspace" class="section tinted-section">
       <div class="section-heading">
@@ -1015,7 +1018,8 @@ data() {
     siteContactSettings:{facebook_url:'',official_website_url:'https://egypttourismin770-wq.github.io/samsar/',qr_target_url:'https://egypttourismin770-wq.github.io/samsar/'},
     inquiries:[], inquiryOpen:false, inquiryPropertyId:'', inquiryQuestion:'', inquiryBusy:false,
     pendingInquiryPropertyId:'', inquiryDrafts:{}, ownerInquiryDrafts:{}, inquiryOwnerResponses:{},
-    assistantPropertyId:'', assistantConversationId:'', assistantBusy:false,
+    aiConversations:[], aiHistoryBusy:false,
+    assistantPropertyId:'', assistantConversationId:'', assistantBusy:false, staffAssistantConversationId:'',
     paymentMethods:[], paymentTransactions:[], availablePaymentMethods:[], listingPaymentOpen:false,
     pendingPaymentPropertyId:'', selectedPaymentMethodId:'', paymentPayerReference:'', paymentReceiptFile:null,
     paymentReceiptName:'', paymentBusy:false, paymentConfigLoading:false,
@@ -1233,6 +1237,7 @@ methods:{
       await this.loadPublicSettings();
       await this.loadBackendViewings();
       await this.loadBackendInquiries();
+      await this.loadAIHistory();
       await this.loadBackendProfiles();
       if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();
       await this.loadAvailablePaymentMethods();
@@ -1244,6 +1249,7 @@ methods:{
             await this.loadPublicSettings();
             await this.loadBackendViewings();
             await this.loadBackendInquiries();
+            await this.loadAIHistory();
             await this.loadBackendProfiles();
             if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();
             await this.loadAvailablePaymentMethods();
@@ -1411,6 +1417,27 @@ methods:{
       const labels={new:'جديد — بانتظار مراجعة الموظف',waiting_owner:'بانتظار رد المالك',owner_replied:'رد المالك — بانتظار الموظف',answered:'تم الرد على العميل',rejected:'مرفوض',closed:'مغلق'};
       this.inquiries=(data||[]).map(row=>({id:row.id,propertyId:row.property_id,propertyTitle:row.property?.title||'عقار',listingCode:row.property?.listing_code,isDemo:!!row.property?.is_demo,customerId:row.customer_id,ownerId:row.owner_id,assignedStaffId:row.assigned_staff_id,question:row.customer_question,status:row.status,statusLabel:labels[row.status]||row.status,responseToCustomer:row.response_to_customer||'',ownerResponse:internal[row.id]?.owner_response||'',createdAt:new Date(row.created_at).getTime()||0,updatedAt:row.updated_at}));
     }catch(error){console.error('Samsar inquiry load failed:',error);this.backendError='تعذر تحميل صندوق الاستفسارات من قاعدة البيانات.';}
+  },
+  async loadAIHistory(){
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser){this.aiConversations=[];return;}
+    if(this.sessionUser.role==='staff'&&this.sessionUser.staffPermissions?.ai_assistant!==true){this.aiConversations=[];return;}
+    this.aiHistoryBusy=true;
+    try{
+      const {data,error}=await supabaseClient.from('ai_conversations').select('id,channel,status,property_id,created_at,last_message_at,property:properties(title,listing_code,is_demo)').eq('customer_id',this.sessionUser.id).order('created_at',{ascending:false}).limit(20);
+      if(error)throw error;
+      this.aiConversations=(data||[]).map(row=>({id:row.id,channel:row.channel,status:row.status,propertyId:row.property_id,propertyTitle:row.property?.title||'',isDemo:!!row.property?.is_demo,createdAt:new Date(row.created_at).getTime(),lastMessageAt:row.last_message_at?new Date(row.last_message_at).getTime():0}));
+    }catch(error){console.error('Samsar AI history load failed:',error);this.aiConversations=[];}
+    finally{this.aiHistoryBusy=false;}
+  },
+  async openSavedAIConversation(conversation){
+    if(!supabaseClient||!this.sessionUser?.isSupabaseUser)return;
+    try{
+      const {data,error}=await supabaseClient.from('ai_messages').select('id,sender_type,message_text,created_at').eq('conversation_id',conversation.id).order('created_at',{ascending:true});
+      if(error)throw error;
+      this.assistantConversationId=conversation.id;this.assistantPropertyId=conversation.propertyId||'';
+      this.assistantMessages=(data||[]).map(row=>({from:['customer','staff'].includes(row.sender_type)?'user':'bot',text:row.message_text}));
+      this.assistantOpen=true;this.toast('تم فتح المحادثة المحفوظة من حسابك.');
+    }catch(error){console.error('Samsar AI conversation load failed:',error);this.toast('تعذر فتح المحادثة من قاعدة البيانات.');}
   },
   async loadBackendProfiles(){
     if(!supabaseClient||!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='admin'){this.backendProfiles=[];return;}
@@ -1784,6 +1811,7 @@ methods:{
   goToNotification(item){this.notificationsOpen=false;if(this.sessionUser?.role==='owner')this.scrollTo('owner-workspace');else if(['admin','staff'].includes(this.sessionUser?.role))this.openAdmin();else this.scrollTo('my-viewings');},
   askAIForProperty(property){
     this.assistantPropertyId=property?.id||'';
+    this.assistantConversationId='';this.assistantMessages=[];
     this.assistantOpen=true;
     this.selectedProperty=null;
     if(property?.isDemo)this.assistantMessages.push({from:'bot',text:'تنبيه: الإعلان الحالي توضيحي للتجربة وليس عقارًا متاحًا فعليًا.'});
@@ -1798,7 +1826,7 @@ methods:{
         const channel=['staff','admin'].includes(this.sessionUser.role)?'staff':'customer';
         const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:question,propertyId:this.assistantPropertyId||null,conversationId:this.assistantConversationId||null,channel}});
         if(error)throw error;
-        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantMessages.push({from:'bot',text:data.reply});return;}
+        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantMessages.push({from:'bot',text:data.reply});await this.loadAIHistory();return;}
       }
       const q=question.toLocaleLowerCase('ar');let reply='استخدم البحث وحدد المنطقة والميزانية ونوع العقار. المعروض حاليًا يتضمن بيانات توضيحية معلّمة كتجريبية.';
       if(q.includes('إيجار')||q.includes('للايجار')||q.includes('للإيجار')){this.filters.transaction='إيجار';reply='عرضت لك العقارات المصنفة للإيجار. راجع شارة «عرض تجريبي» قبل اعتبار أي إعلان متاحًا.';}
@@ -1819,9 +1847,9 @@ methods:{
     this.staffAssistantInput='';
     if(this.sessionUser?.isSupabaseUser&&supabaseClient&&this.aiSettings?.enabled){
       try{
-        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:raw,propertyId:null,conversationId:null,channel:'staff'}});
+        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:raw,propertyId:null,conversationId:this.staffAssistantConversationId||null,channel:'staff'}});
         if(error)throw error;
-        if(data?.reply){this.staffAssistantReply=data.reply;return;}
+        if(data?.reply){this.staffAssistantReply=data.reply;this.staffAssistantConversationId=data.conversationId||this.staffAssistantConversationId;return;}
       }catch(error){console.error('Samsar staff AI failed:',error);}
     }
     const q=raw.toLocaleLowerCase('ar');
