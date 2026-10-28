@@ -1087,8 +1087,10 @@ img{max-width:100%}
       showSamsarRuntimeError('تعذّر تحميل ملف JavaScript: ' + (target.src || 'ملف داخلي'));
       return;
     }
+    // Ignore resource-load errors such as images and fonts; they are not JavaScript runtime exceptions.
+    if (target && target !== window) return;
     var runtimeError = event.error;
-    var detail = event.message || (runtimeError && (runtimeError.stack || runtimeError.message)) || ('JavaScript error (' + event.type + ')');
+    var detail = event.message || (runtimeError && (runtimeError.stack || runtimeError.message)) || 'JavaScript runtime exception with no message';
     if (event.filename) detail += '\\n' + event.filename + ':' + event.lineno + ':' + event.colno;
     if (runtimeError && runtimeError.name && !detail.includes(runtimeError.name)) detail = runtimeError.name + ': ' + detail;
     showSamsarRuntimeError(detail);
