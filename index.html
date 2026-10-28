@@ -1281,8 +1281,9 @@ computed:{
     const role=this.sessionUser?.role;
     return this.adminTabs.filter(t=>{
       if(!t.roles.includes(role))return false;
-      if(role==='admin'&&this.adminRouteMode==='admin'&&t.id==='settings')return false;
+      if(role==='admin'&&this.adminRouteMode==='admin'&&(t.id==='settings'||t.id==='staff'))return false;
       if(role==='admin'&&this.adminRouteMode==='settings')return t.id==='settings';
+      if(role==='admin'&&this.adminRouteMode==='employees')return t.id==='staff';
       if(role!=='staff')return true;
       const required={listings:'listings_review',viewings:'viewings',inquiries:'inquiries',assistant:'ai_assistant'}[t.id];
       return !required || this.sessionUser?.staffPermissions?.[required]===true;
@@ -1455,18 +1456,18 @@ methods:{
   },
   handleDashboardDeepLink(){
     const params=new URLSearchParams(window.location.search);
-    const route=params.has('admin')?'admin':(params.has('staff')?'staff':(params.has('settings')?'settings':(params.has('owner')?'owner':(params.has('customer')?'customer':(params.has('dashboard')?'dashboard':'')))));
+    const route=params.has('admin')?'admin':(params.has('employees')?'employees':(params.has('staff')?'staff':(params.has('settings')?'settings':(params.has('owner')?'owner':(params.has('customer')?'customer':(params.has('dashboard')?'dashboard':''))))));
     if(!route)return;
     if(!this.sessionUser){this.openLogin();return;}
     if(route==='admin'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.toast('هذا الرابط مخصص لمدير النظام فقط.');return;}
-    if(route==='settings'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.toast('إعدادات المنصة مخصصة لمدير النظام فقط.');return;}
+    if((route==='settings'||route==='employees')&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.toast('هذه الصفحة مخصصة لمدير النظام فقط.');return;}
     if(route==='staff'&&this.sessionUser.role!=='staff'){this.adminOpen=false;this.toast('هذا الرابط مخصص لحساب الموظف المعتمد فقط.');return;}
     if(route==='dashboard'&&!['admin','staff'].includes(this.sessionUser.role)){this.adminOpen=false;this.toast('لوحة العمل متاحة للمدير والموظف المعتمد فقط.');return;}
     if(route==='owner'&&this.sessionUser.role!=='owner'){this.toast('هذه الصفحة مخصصة لصاحب العقار.');return;}
     if(route==='customer'&&this.sessionUser.role!=='customer'){this.toast('هذه الصفحة مخصصة لحساب العميل.');return;}
     if(route==='owner'){this.adminOpen=false;this.$nextTick(()=>this.scrollTo('owner-workspace'));return;}
     if(route==='customer'){this.adminOpen=false;this.$nextTick(()=>this.scrollTo('my-viewings'));return;}
-    this.adminRouteMode=route;this.adminOpen=true;this.adminTab=route==='settings'?'settings':'overview';
+    this.adminRouteMode=route;this.adminOpen=true;this.adminTab=route==='settings'?'settings':(route==='employees'?'staff':'overview');
   },
   async syncAuthSession(session){
     if(!session?.user){if(this.sessionUser?.isSupabaseUser)this.sessionUser=null;return;}
