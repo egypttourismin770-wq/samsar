@@ -1087,7 +1087,11 @@ img{max-width:100%}
       showSamsarRuntimeError('تعذّر تحميل ملف JavaScript: ' + (target.src || 'ملف داخلي'));
       return;
     }
-    showSamsarRuntimeError((event.message || 'JavaScript error') + (event.filename ? '\\n' + event.filename + ':' + event.lineno + ':' + event.colno : ''));
+    var runtimeError = event.error;
+    var detail = event.message || (runtimeError && (runtimeError.stack || runtimeError.message)) || ('JavaScript error (' + event.type + ')');
+    if (event.filename) detail += '\\n' + event.filename + ':' + event.lineno + ':' + event.colno;
+    if (runtimeError && runtimeError.name && !detail.includes(runtimeError.name)) detail = runtimeError.name + ': ' + detail;
+    showSamsarRuntimeError(detail);
   }, true);
   window.addEventListener('unhandledrejection', function (event) {
     var reason = event.reason;
@@ -2089,7 +2093,11 @@ methods:{
 }
 };
 
-Vue.createApp(SamsarApp).mount('#app');
+var samsarVueApp = Vue.createApp(SamsarApp);
+samsarVueApp.config.errorHandler = function (error, instance, info) {
+  showSamsarRuntimeError('Vue ' + info + ': ' + (error && (error.stack || error.message) ? (error.stack || error.message) : String(error)));
+};
+samsarVueApp.mount('#app');
 
 </script>
 </body>
