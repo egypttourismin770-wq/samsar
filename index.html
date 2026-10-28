@@ -1474,11 +1474,16 @@ methods:{
   async loadPublicSettings(){
     if(!supabaseClient)return;
     try{
-      const {data,error}=await supabaseClient.from('platform_settings').select('setting_value').eq('setting_key','whatsapp_public_number').maybeSingle();
+      const {data,error}=await supabaseClient.from('platform_settings').select('setting_key,setting_value').in('setting_key',['site_brand_settings','whatsapp_public_number']);
       if(error)throw error;
-      const value=data?.setting_value;
-      this.settings.whatsappPhone=typeof value==='string'?value:'';
-    }catch(error){console.warn('تعذر تحميل إعداد واتساب العام:',error);}
+      const rows=Array.isArray(data)?data:[];
+      const brand=rows.find(row=>row.setting_key==='site_brand_settings')?.setting_value;
+      const phone=rows.find(row=>row.setting_key==='whatsapp_public_number')?.setting_value;
+      if(brand&&typeof brand==='object'&&!Array.isArray(brand)){
+        this.settings={...this.settings,...brand};
+      }
+      this.settings.whatsappPhone=typeof phone==='string'?phone:'';
+    }catch(error){console.warn('تعذر تحميل إعدادات المنصة العامة:',error);}
   },
   async saveSettings(){
     this.settings.name=this.settings.name.trim()||'سمسار';
@@ -1491,14 +1496,13 @@ methods:{
       return;
     }
     try{
-      const {error}=await supabaseClient.from('platform_settings').upsert({
-        setting_key:'whatsapp_public_number',
-        setting_value:phone,
-        description:'رقم واتساب الرسمي لاستقبال استفسارات العملاء بصيغة دولية دون علامة + أو مسافات'
-      },{onConflict:'setting_key'});
+      const {error}=await supabaseClient.from('platform_settings').upsert([
+        {setting_key:'site_brand_settings',setting_value:{name:this.settings.name,tagline:this.settings.tagline,primaryColor:this.settings.primaryColor,accentColor:this.settings.accentColor,backgroundColor:this.settings.backgroundColor},description:'إعدادات الهوية العامة لواجهة سمسار'},
+        {setting_key:'whatsapp_public_number',setting_value:phone,description:'رقم واتساب الرسمي لاستقبال استفسارات العملاء بصيغة دولية دون علامة + أو مسافات'}
+      ],{onConflict:'setting_key'});
       if(error)throw error;
-      this.toast('تم حفظ الإعدادات، وتم تحديث رقم واتساب الرسمي في قاعدة البيانات.');
-    }catch(error){console.error('تعذر حفظ إعداد واتساب:',error);this.toast('تم حفظ الشكل محليًا، لكن تعذر حفظ رقم واتساب في قاعدة البيانات.');}
+      this.toast('تم حفظ إعدادات الهوية ورقم واتساب مركزيًا في قاعدة البيانات.');
+    }catch(error){console.error('تعذر حفظ إعدادات المنصة:',error);this.toast('تم حفظ الإعدادات على هذا المتصفح، لكن تعذر حفظها مركزيًا في قاعدة البيانات.');}
   },
   statusClass(status){if(['تمت الموافقة من المالك','تم قبول الموعد البديل','اكتملت المعاينة'].includes(status))return 'good';if(['مرفوضة من المالك','ملغاة من العميل','موقوف'].includes(status))return 'bad';if(['بانتظار موافقة المالك','موعد بديل مقترح','قيد المراجعة التجريبية'].includes(status))return 'pending';return '';},
   goToNotification(item){this.notificationsOpen=false;if(this.sessionUser?.role==='owner')this.scrollTo('owner-workspace');else if(['admin','staff'].includes(this.sessionUser?.role))this.openAdmin();else this.scrollTo('my-viewings');},
