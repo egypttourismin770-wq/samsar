@@ -1001,37 +1001,20 @@ img{max-width:100%}
 
         <div class="admin-main">
           <div v-if="adminTab === 'overview' && sessionUser?.role === 'staff'" class="admin-content staff-dashboard">
-            <div class="staff-welcome"><div><span class="eyebrow">لوحة فريق العمل · SAMSAR</span><h3>أهلًا {{ sessionUser?.name }} 👋</h3><p>تابع حركة العملاء وطلبات المعاينة والاستفسارات من مكان واحد، وابدأ بأهم المهام التي تحتاج متابعة.</p></div><div class="staff-welcome-icon">▦</div></div>
-            <div class="staff-live-note"><span class="staff-live-dot"></span><span>{{ backendReady ? 'المؤشرات محسوبة من السجلات المتاحة في قاعدة سمسار' : 'جارٍ تحميل بيانات التشغيل' }} · آخر 7 أيام</span></div>
+            <div class="staff-welcome"><div><span class="eyebrow">مساحة الموظفين · SAMSAR</span><h3>متابعة الإعلانات والطلبات</h3><p>هذه المساحة مخصصة لمتابعة حالة الإعلانات وطلبات المعاينة فقط. إعدادات المنصة وصلاحيات الحسابات متاحة للأدمن وحده.</p></div><div class="staff-welcome-icon">▦</div></div>
             <div class="staff-kpi-grid">
-              <article class="staff-kpi" style="--kpi-color:#148f81;--kpi-bg:#e5f6ef"><div class="staff-kpi-head"><span class="staff-kpi-label">استفسارات تحتاج متابعة</span><span class="staff-kpi-icon">✉</span></div><strong>{{ staffDashboardMetrics.pendingInquiries }}</strong><small>جديد أو بانتظار رد المالك أو مراجعة الرد</small></article>
-              <article class="staff-kpi" style="--kpi-color:#d99a3d;--kpi-bg:#fff3dc"><div class="staff-kpi-head"><span class="staff-kpi-label">طلبات معاينة مفتوحة</span><span class="staff-kpi-icon">◷</span></div><strong>{{ staffDashboardMetrics.openViewings }}</strong><small>تحتاج تنسيقًا أو تأكيدًا للموعد</small></article>
-              <article class="staff-kpi" style="--kpi-color:#4f83bd;--kpi-bg:#eaf2fc"><div class="staff-kpi-head"><span class="staff-kpi-label">عملاء نشطون</span><span class="staff-kpi-icon">♙</span></div><strong>{{ staffDashboardMetrics.activeCustomers }}</strong><small>عملاء لديهم استفسار أو معاينة في آخر 7 أيام</small></article>
-              <article class="staff-kpi" style="--kpi-color:#7c67bd;--kpi-bg:#f0ebfc"><div class="staff-kpi-head"><span class="staff-kpi-label">عقارات حقيقية منشورة</span><span class="staff-kpi-icon">⌂</span></div><strong>{{ staffDashboardMetrics.publishedProperties }}</strong><small>مستبعد منها الإعلانات التوضيحية</small></article>
-            </div>
-            <div class="staff-trend-grid">
-              <article class="staff-panel"><div class="staff-panel-heading"><div><h4>حركة الطلبات خلال الأسبوع</h4><p>عدد الاستفسارات وطلبات المعاينة حسب تاريخ الإنشاء</p></div><span class="staff-status-pill">7 أيام</span></div>
-                <div class="staff-chart">
-                  <div v-for="day in staffWeeklyTrend" :key="day.key" class="staff-chart-day"><div class="staff-chart-bars"><span class="staff-chart-bar" :title="day.inquiries+' استفسار'" :style="{height:staffChartHeight(day.inquiries,staffWeeklyTrendMax)+'%'}"></span><span class="staff-chart-bar viewing" :title="day.viewings+' معاينة'" :style="{height:staffChartHeight(day.viewings,staffWeeklyTrendMax)+'%'}"></span></div><small>{{ day.label }}</small></div>
-                </div>
-                <div class="staff-chart-legend"><span><i class="staff-legend-dot"></i>استفسارات</span><span><i class="staff-legend-dot viewing"></i>معاينات</span></div>
-              </article>
-              <article class="staff-panel"><div class="staff-panel-heading"><div><h4>مؤشرات سير العمل</h4><p>نسبة الحالات المفتوحة والمكتملة من السجلات المتاحة</p></div></div>
-                <div class="staff-status-list">
-                  <div class="staff-status-row"><div class="staff-status-top"><span>استفسارات تم الرد عليها أو إغلاقها</span><strong>{{ staffDashboardMetrics.closedInquiries }}</strong></div><div class="staff-progress"><span :style="{width:staffDashboardMetrics.inquiryCompletion+'%'}"></span></div></div>
-                  <div class="staff-status-row"><div class="staff-status-top"><span>معاينات مكتملة</span><strong>{{ staffDashboardMetrics.completedViewings }}</strong></div><div class="staff-progress amber"><span :style="{width:staffDashboardMetrics.viewingCompletion+'%'}"></span></div></div>
-                  <div class="staff-rating-summary"><div class="staff-rating-score">{{ staffDashboardMetrics.averagePropertyRating ? staffDashboardMetrics.averagePropertyRating.toFixed(1) : '—' }}</div><div><div class="staff-rating-stars">{{ staffDashboardMetrics.averagePropertyRating ? '★★★★★' : '☆☆☆☆☆' }}</div><strong>متوسط تقييم العقارات</strong><small>{{ staffDashboardMetrics.propertyRatingCount }} تقييمًا على العقارات الحقيقية · ليس تقييمًا للموظف</small></div></div>
-                </div>
-              </article>
-            </div>
-            <div class="staff-panel"><div class="staff-panel-heading"><div><h4>أحدث الطلبات</h4><p>تابع أحدث حركة مسجلة في قاعدة البيانات</p></div><span class="staff-status-pill">{{ staffRecentActivity.length }} عناصر</span></div>
-              <div v-if="staffRecentActivity.length" class="staff-recent-list"><div v-for="item in staffRecentActivity" :key="item.id" class="staff-recent-item"><span class="staff-recent-avatar">{{ item.kind==='inquiry'?'✉':'◷' }}</span><div class="staff-recent-copy"><strong>{{ item.title }}</strong><small>{{ item.subtitle }} · {{ item.when }}</small></div><span class="staff-status-pill" :class="{done:item.done}">{{ item.status }}</span></div></div>
-              <div v-else class="staff-empty">لا توجد استفسارات أو معاينات حقيقية حتى الآن. ستظهر هنا تلقائيًا عند تسجيل طلبات فعلية.</div>
+              <article class="staff-kpi"><div class="staff-kpi-head"><span class="staff-kpi-label">الإعلانات الرسمية</span><span class="staff-kpi-icon">⌂</span></div><strong>{{ realProperties.length }}</strong><small>من دون الإعلانات التجريبية</small></article>
+              <article class="staff-kpi"><div class="staff-kpi-head"><span class="staff-kpi-label">إعلانات منشورة ومتاحة</span><span class="staff-kpi-icon">✓</span></div><strong>{{ realProperties.filter(p=>p.backendStatus==='published').length }}</strong><small>إعلانات رسمية ظاهرة للعملاء</small></article>
+              <article class="staff-kpi"><div class="staff-kpi-head"><span class="staff-kpi-label">مباع / مؤجر</span><span class="staff-kpi-icon">⌑</span></div><strong>{{ realProperties.filter(p=>p.backendStatus==='rented').length }}</strong><small>حالات تم إغلاقها</small></article>
+              <article class="staff-kpi"><div class="staff-kpi-head"><span class="staff-kpi-label">طلبات المعاينة</span><span class="staff-kpi-icon">◷</span></div><strong>{{ realViewings.length }}</strong><small>طلبات مرتبطة بإعلانات رسمية</small></article>
             </div>
             <div class="staff-quick-actions">
-              <button v-if="visibleAdminTabs.some(tab=>tab.id==='inquiries')" class="staff-quick-action" @click="adminTab='inquiries'"><span>✉</span><div><strong>صندوق الاستفسارات</strong><small>مراجعة العملاء والردود</small></div></button>
-              <button v-if="visibleAdminTabs.some(tab=>tab.id==='viewings')" class="staff-quick-action" @click="adminTab='viewings'"><span>◷</span><div><strong>طلبات المعاينة</strong><small>تنسيق المواعيد ومتابعتها</small></div></button>
-              <button v-if="visibleAdminTabs.some(tab=>tab.id==='listings')" class="staff-quick-action" @click="adminTab='listings'"><span>⌂</span><div><strong>مراجعة العقارات</strong><small>عرض الإعلانات المتاحة لدورك</small></div></button>
+              <button v-if="visibleAdminTabs.some(tab=>tab.id==='listings')" class="staff-quick-action" @click="adminTab='listings'"><span>⌂</span><div><strong>متابعة الإعلانات</strong><small>حالة الإعلان: متاح، قيد المراجعة، مباع أو مؤرشف</small></div></button>
+              <button v-if="visibleAdminTabs.some(tab=>tab.id==='viewings')" class="staff-quick-action" @click="adminTab='viewings'"><span>◷</span><div><strong>متابعة طلبات المعاينة</strong><small>المواعيد والحالات والطلبات المفتوحة</small></div></button>
+            </div>
+            <div class="staff-panel"><div class="staff-panel-heading"><div><h4>أحدث طلبات المعاينة الرسمية</h4><p>لا تظهر هنا طلبات الإعلانات التجريبية.</p></div><span class="staff-status-pill">{{ realViewings.length }} طلب</span></div>
+              <div v-if="realViewings.length" class="staff-recent-list"><div v-for="request in realViewings.slice(0,6)" :key="request.id" class="staff-recent-item"><span class="staff-recent-avatar">◷</span><div class="staff-recent-copy"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><small>رقم الطلب {{ request.id.slice(0,8).toUpperCase() }} · {{ request.customerName || 'عميل' }} · {{ request.date || 'موعد غير محدد' }}</small></div><span class="staff-status-pill">{{ request.status }}</span></div></div>
+              <div v-else class="staff-empty">لا توجد طلبات معاينة رسمية حتى الآن.</div>
             </div>
           </div>
 
@@ -1124,7 +1107,7 @@ img{max-width:100%}
 
           <div v-if="adminTab === 'settings'" class="admin-content"><h3>إعدادات المنصة — مدير النظام فقط</h3><form class="admin-form" @submit.prevent="saveSettings"><label>اسم المنصة<input v-model.trim="settings.name" required maxlength="60" /></label><label>وصف المنصة<textarea v-model.trim="settings.tagline" rows="3" maxlength="300"></textarea></label><div class="color-grid"><label>البترولي<input v-model="settings.primaryColor" type="color" /></label><label>التركواز<input v-model="settings.accentColor" type="color" /></label><label>الخلفية<input v-model="settings.backgroundColor" type="color" /></label></div><h4>التواصل الرسمي</h4><label>رقم واتساب الرسمي<input v-model.trim="settings.whatsappPhone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="مثال لمصر: 2010XXXXXXXX" /><small class="muted">صيغة دولية وأرقام فقط مع كود الدولة، من غير + أو مسافات.</small></label><label>رابط صفحة فيسبوك الرسمية<input v-model.trim="siteContactSettings.facebook_url" type="url" placeholder="https://www.facebook.com/اسم-الصفحة" /></label><label>رابط الموقع الرسمي<input v-model.trim="siteContactSettings.official_website_url" type="url" placeholder="https://..." /></label><label>الرابط الذي سيُنشأ له QR<input v-model.trim="siteContactSettings.qr_target_url" type="url" placeholder="https://..." /></label><h4>المساعد الذكي الرسمي للعميل</h4><p class="muted">اختر مزود الذكاء والنموذج. المساعد يستخدم بيانات الإعلانات المنشورة ومقالات المعرفة، ويحفظ سجل المحادثة في قاعدة سمسار.</p><div class="ai-connection-card"><div class="row-between"><strong>حالة الربط</strong><span class="status-pill">{{ aiSettings.enabled ? 'مفعّل في الإعدادات' : 'متوقف — لن تُرسل طلبات مدفوعة' }}</span></div><small>التفعيل هنا لا يضيف رصيدًا ولا ينشئ اشتراكًا. استخدام واجهة OpenAI API قد يكون برسوم حسب الاستهلاك.</small></div><label>مزود الذكاء الاصطناعي<select v-model="aiSettings.provider" @change="changeAIProvider($event.target.value)"><option value="openai">OpenAI الرسمي</option><option value="openai-compatible">مزود آخر متوافق مع OpenAI Chat Completions</option></select></label><label>عنوان API الأساسي<input v-model.trim="aiSettings.base_url" type="url" :readonly="aiSettings.provider==='openai'" placeholder="https://api.example.com/v1" /><small class="muted" v-if="aiSettings.provider==='openai'">العنوان الرسمي: https://api.openai.com/v1</small></label><label>اختيار نموذج الذكاء<select v-model="aiSettings.model"><option value="gpt-5-nano">GPT-5 Nano — أخف وأقل تكلفة عادةً</option><option value="gpt-5-mini">GPT-5 Mini — الاختيار المتوازن</option><option value="gpt-5.5">GPT-5.5 — قدرات أعلى حسب إتاحة الحساب</option></select></label><label class="checkbox-line"><input v-model="aiSettings.enabled" type="checkbox" /> تفعيل المساعد الخارجي بعد إضافة المفتاح السري واختباره</label><div class="policy-note">مهم: لا تضع مفتاح API هنا أو داخل GitHub. يجب إضافة مفتاح OpenAI API كـ Secret باسم <strong>SAMSAR_AI_API_KEY</strong> في إعدادات Supabase Edge Functions. مفتاح ChatGPT Plus/Free لا يُستخدم بدل مفتاح API، وقد تُحسب تكلفة مستقلة على الاستخدام. لن نفعّل الاتصال تلقائيًا.</div><div class="inline-actions"><button class="primary-button" type="submit">حفظ إعدادات المنصة</button><button class="outline-light-button" type="button" @click="testAIConnection" :disabled="aiTestBusy">{{ aiTestBusy ? 'جارٍ الاختبار…' : 'اختبار اتصال حقيقي' }}</button></div><p class="muted">اختبار الاتصال يرسل رسالة اختبار واحدة إلى المزود وقد يستهلك مبلغًا صغيرًا من رصيد API. لا تضغطه إلا بعد إضافة المفتاح السري.</p></form></div>
 
-          <div class="admin-bottom"><button class="outline-light-button" @click="exportBackup">تصدير JSON</button><button class="outline-light-button" @click="closeAdmin">إغلاق</button><button class="danger-button" @click="logout">تسجيل الخروج</button></div>
+          <div class="admin-bottom"><button class="outline-light-button" @click="exportBackup">تصدير JSON</button><button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="outline-light-button" @click="closeAdmin">إغلاق</button><button class="danger-button" @click="logout">تسجيل الخروج</button></div>
         </div>
       </div>
     </section>
@@ -1326,6 +1309,7 @@ computed:{
   filteredAdminProperties(){
     const term=(this.adminListingSearch||'').toLocaleLowerCase('ar');
     return this.properties.filter(p=>{
+      if(this.sessionUser?.role==='staff'&&p.isDemo)return false;
       const searchable=[p.title,p.area,p.neighborhood,p.listingCode,p.id,p.description].join(' ').toLocaleLowerCase('ar');
       const matches=!term||searchable.includes(term),filter=this.adminListingFilter;
       const kind=filter==='all'||(filter==='demo'&&p.isDemo)||(filter==='real'&&!p.isDemo)||(filter==='published'&&p.backendStatus==='published')||(filter==='sold'&&['rented','مؤجر'].includes(p.backendStatus||p.status));
@@ -1380,7 +1364,7 @@ computed:{
     const role=this.sessionUser?.role;
     return this.adminTabs.filter(t=>{
       if(!t.roles.includes(role))return false;
-      if(role==='admin'&&this.adminRouteMode==='admin'&&(t.id==='settings'||t.id==='staff'))return false;
+      if(role==='admin'&&this.adminRouteMode==='admin'&&t.id==='staff')return false;
       if(role==='admin'&&this.adminRouteMode==='settings')return t.id==='settings';
       if(role==='admin'&&this.adminRouteMode==='employees')return t.id==='staff';
       if(role!=='staff')return true;
@@ -1558,9 +1542,9 @@ methods:{
     const route=params.has('admin')?'admin':(params.has('employees')?'employees':(params.has('staff')?'staff':(params.has('settings')?'settings':(params.has('owner')?'owner':(params.has('customer')?'customer':(params.has('dashboard')?'dashboard':''))))));
     if(!route)return;
     if(!this.sessionUser){this.openLogin();return;}
-    if(route==='admin'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.toast('هذا الرابط مخصص لمدير النظام فقط.');return;}
-    if((route==='settings'||route==='employees')&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.toast('هذه الصفحة مخصصة لمدير النظام فقط.');return;}
-    if(route==='staff'&&this.sessionUser.role!=='staff'){this.adminOpen=false;this.toast('هذا الرابط مخصص لحساب الموظف المعتمد فقط.');return;}
+    if(route==='admin'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذا الرابط مخصص لمدير النظام فقط. سجّل الدخول بحساب الأدمن المعتمد.';this.toast('هذه مساحة خاصة بالأدمن.');return;}
+    if((route==='settings'||route==='employees')&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذه الصفحة مخصصة لمدير النظام فقط.';this.toast('لا تملك صلاحية الدخول لهذه الصفحة.');return;}
+    if(route==='staff'&&this.sessionUser.role!=='staff'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذه مساحة الموظفين المعتمدين فقط. استخدم حساب الموظف الصحيح.';this.toast('لا تملك صلاحية الدخول لمساحة الموظفين.');return;}
     if(route==='dashboard'&&!['admin','staff'].includes(this.sessionUser.role)){this.adminOpen=false;this.toast('لوحة العمل متاحة للمدير والموظف المعتمد فقط.');return;}
     if(route==='owner'&&this.sessionUser.role!=='owner'){this.toast('هذه الصفحة مخصصة لصاحب العقار.');return;}
     if(route==='customer'&&this.sessionUser.role!=='customer'){this.toast('هذه الصفحة مخصصة لحساب العميل.');return;}
@@ -1742,7 +1726,7 @@ methods:{
     if(profile.id===this.sessionUser.id){this.toast('لا يمكن تغيير صلاحية حساب المدير الحالي من هذه الشاشة.');return;}
     if(!['customer','owner','staff'].includes(newRole)){this.toast('الصلاحية المطلوبة غير مسموح بها.');return;}
     this.roleUpdateBusyId=profile.id;
-    try{const defaults={inquiries:false,viewings:true,ai_assistant:false,listings_review:true,operations:false};const patch={role:newRole};if(newRole==='staff')patch.staff_permissions={...defaults,...(profile.staff_permissions||{})};else patch.staff_permissions={};if(newRole==='owner')patch.requested_role='owner';const {error}=await supabaseClient.from('profiles').update(patch).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
+    try{const defaults={inquiries:false,viewings:true,ai_assistant:false,listings_review:true,operations:false};const patch={role:newRole};if(newRole==='staff')patch.staff_permissions=defaults;else patch.staff_permissions={};if(newRole==='owner')patch.requested_role='owner';const {error}=await supabaseClient.from('profiles').update(patch).eq('id',profile.id);if(error)throw error;await this.loadBackendProfiles();this.toast('تم تحديث صلاحية المستخدم.');}
     catch(error){console.error('Samsar role update failed:',error);this.toast('تعذر تحديث الصلاحية؛ راجع صلاحيات المدير.');}
     finally{this.roleUpdateBusyId='';}
   },
