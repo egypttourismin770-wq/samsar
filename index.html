@@ -972,6 +972,14 @@ const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBL
 const STORAGE_KEY = 'samsar-marketplace-demo-v3';
 const fallbackImage = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80';
 
+function sanitizePublicPropertyText(value) {
+return String(value || '')
+  .replace(/https?:\/\/(?:wa\.me|api\.whatsapp\.com|www\.whatsapp\.com)\/[^\s)]+/gi, '[تم إخفاء رابط التواصل المباشر]')
+  .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[تم إخفاء البريد الإلكتروني]')
+  .replace(/(?:\+?\d[\s().-]*){9,15}/g, '[تم إخفاء رقم التواصل]')
+  .replace(/(?:واتساب|واتس|تواصل مباشرة|اتصل بي)\s*[:：-]?\s*[^\n]{0,90}/gi, '[التواصل من خلال سمسار]');
+}
+
 function makeId(prefix = 'id') {
 return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
 }
@@ -1292,7 +1300,7 @@ methods:{
     });
     const amenities=(row.property_amenities||[]).map(item=>item.amenity_name).filter(Boolean);
     return {id:row.id,listingCode:row.listing_code,isBackendRecord:true,isDemo:!!row.is_demo,ownerId:row.owner_id,ownerFeeStatus:row.owner_fee_status,
-      title:row.title,description:row.description||'',transaction:row.listing_type==='rent'?'إيجار':'بيع',type:typeNames[row.property_type]||'أخرى',
+      title:sanitizePublicPropertyText(row.title),description:sanitizePublicPropertyText(row.description||''),transaction:row.listing_type==='rent'?'إيجار':'بيع',type:typeNames[row.property_type]||'أخرى',
       price:Number(row.listing_type==='rent'?row.monthly_rent_egp:row.sale_price_egp)||0,suggestedPrice:Number(row.suggested_price_egp)||0,
       area:row.governorate||row.city||'',neighborhood:row.district||'',size:Number(row.area_sqm)||0,bedrooms:Number(row.bedrooms)||0,bathrooms:Number(row.bathrooms)||0,
       contractDetails:row.contract_details||'',mapUrl:row.map_url||'',amenities,photos:images,ownerEmail:row.owner_id===this.sessionUser?.id?this.sessionUser?.email||'':'',
