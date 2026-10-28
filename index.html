@@ -1846,16 +1846,30 @@ methods:{
     if(property?.isDemo)this.assistantMessages.push({from:'bot',text:'تنبيه: الإعلان الحالي توضيحي للتجربة وليس عقارًا متاحًا فعليًا.'});
     this.assistantMessages.push({from:'bot',text:property?'اسألني عن تفاصيل الإعلان: '+property.title+' — '+property.area+'.':'اسألني عن العقارات المنشورة في سمسار.'});
   },
+  getGuestSessionId(){
+    const key='samsar_ai_guest_session_v1';
+    try{
+      const saved=localStorage.getItem(key);
+      if(saved&&/^[A-Za-z0-9-]{32,100}$/.test(saved))return saved;
+      const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);
+      const token=Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+      localStorage.setItem(key,token);
+      return token;
+    }catch(error){
+      const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);
+      return Array.from(bytes,byte=>byte.toString(16).padStart(2,'0')).join('');
+    }
+  },
   quickAsk(text){this.assistantInput=text;this.askAssistant();},
   async askAssistant(){
     const question=this.assistantInput.trim();if(!question||this.assistantBusy)return;
     this.assistantMessages.push({from:'user',text:question});this.assistantInput='';this.assistantBusy=true;
     try{
-      if(this.sessionUser?.isSupabaseUser&&supabaseClient&&this.aiSettings?.enabled){
-        const channel=['staff','admin'].includes(this.sessionUser.role)?'staff':'customer';
-        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:question,propertyId:this.assistantPropertyId||null,conversationId:this.assistantConversationId||null,channel}});
+      const canUseCustomerAI=!this.sessionUser?.isSupabaseUser||['customer','admin'].includes(this.sessionUser?.role);
+      if(canUseCustomerAI&&supabaseClient&&this.aiSettings?.enabled){
+        const {data,error}=await supabaseClient.functions.invoke('samsar-ai-chat',{body:{message:question,propertyId:this.assistantPropertyId||null,conversationId:this.assistantConversationId||null,channel:'customer',guestSessionId:this.sessionUser?.isSupabaseUser?null:this.getGuestSessionId()}});
         if(error)throw error;
-        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantMessages.push({from:'bot',text:data.reply});await this.loadAIHistory();return;}
+        if(data?.reply){this.assistantConversationId=data.conversationId||this.assistantConversationId;this.assistantMessages.push({from:'bot',text:data.reply});if(this.sessionUser?.isSupabaseUser)await this.loadAIHistory();return;}
       }
       const q=question.toLocaleLowerCase('ar');let reply='استخدم البحث وحدد المنطقة والميزانية ونوع العقار. المعروض حاليًا يتضمن بيانات توضيحية معلّمة كتجريبية.';
       if(q.includes('إيجار')||q.includes('للايجار')||q.includes('للإيجار')){this.filters.transaction='إيجار';reply='عرضت لك العقارات المصنفة للإيجار. راجع شارة «عرض تجريبي» قبل اعتبار أي إعلان متاحًا.';}
