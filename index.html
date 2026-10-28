@@ -1227,7 +1227,22 @@ methods:{
       await this.loadAvailablePaymentMethods();
       const {data:{subscription}}=supabaseClient.auth.onAuthStateChange((_event,session)=>{
         setTimeout(async()=>{
-          try{await this.syncAuthSession(session);await this.loadBackendProperties();await this.loadPublicSettings();await this.loadBackendViewings();await this.loadBackendInquiries();await this.loadBackendProfiles();if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();await this.loadAvailablePaymentMethods();this.handleDashboardDeepLink();}
+          try{
+            await this.syncAuthSession(session);
+            await this.loadBackendProperties();
+            await this.loadPublicSettings();
+            await this.loadBackendViewings();
+            await this.loadBackendInquiries();
+            await this.loadBackendProfiles();
+            if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();
+            await this.loadAvailablePaymentMethods();
+            if(this.pendingInquiryPropertyId && this.sessionUser?.role==='customer'){
+              const pendingId=this.pendingInquiryPropertyId;this.pendingInquiryPropertyId='';
+              const pendingProperty=this.getProperty(pendingId);
+              if(pendingProperty&&!pendingProperty.isDemo){this.inquiryPropertyId=pendingId;this.inquiryQuestion='';this.inquiryOpen=true;this.selectedProperty=null;}
+            }
+            this.handleDashboardDeepLink();
+          }
           catch(error){console.error('Samsar auth refresh failed:',error);this.backendError='تعذر تحديث بيانات الحساب من قاعدة البيانات.';}
         },0);
       });
