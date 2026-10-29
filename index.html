@@ -1815,7 +1815,7 @@ methods:{
     }catch(error){console.error('Staff account creation failed:',error);this.toast(error?.message||'تعذر إنشاء حساب الموظف. راجع إعدادات Supabase ثم حاول مرة أخرى.');}
     finally{this.staffCreateBusy=false;}
   },
-  async updateStaffPermission(profile,permission,enabled)
+  async updateStaffPermission(profile,permission,enabled){
     if(this.sessionUser?.role!=='admin'||!this.sessionUser?.isSupabaseUser||profile?.role!=='staff')return;
     const allowed=['inquiries','viewings','ai_assistant','listings_review','operations'];
     if(!allowed.includes(permission)){this.toast('الصلاحية غير معروفة.');return;}
