@@ -1004,7 +1004,7 @@ img{max-width:100%}
         <div class="rating-summary"><span class="stars">{{ starsText(selectedProperty.rating) }}</span><strong>{{ Number(selectedProperty.rating || 0).toFixed(1) }}</strong><small>({{ selectedProperty.reviews || 0 }} تقييم)</small></div>
       </div>
       <div class="detail-footer"><div><small>التواصل عبر سمسار</small><strong>{{ selectedProperty.isDemo ? 'بيانات توضيحية فقط' : 'لا يظهر رقم المالك للعميل' }}</strong></div><div class="detail-actions"><button class="outline-light-button" @click="askAIForProperty(selectedProperty)">اسأل المساعد عن العقار</button><button v-if="!selectedProperty.isDemo" class="whatsapp-button" @click="startInquiry(selectedProperty)">استفسار عبر سمسار</button><button v-if="selectedProperty.isDemo || (selectedProperty.isBackendRecord && selectedProperty.backendStatus === 'published')" type="button" class="primary-button" @click="requestViewing(selectedProperty)">{{ selectedProperty.isDemo ? 'تجربة نموذج المعاينة' : 'احجز معاينة العقار ←' }}</button></div></div>
-      <div v-if="selectedProperty.isDemo" class="demo-info">إعلان وصور تجريبية لا تمثل عقارًا متاحًا فعليًا. الاستفسار والمعاينة غير متاحين لهذا الإعلان.</div>
+      <div v-if="selectedProperty.isDemo" class="demo-info">هذا إعلان تجريبي لا يمثل عقارًا متاحًا فعليًا. يمكنك تجربة فتح نموذج المعاينة، لكن لن يتم إرسال طلب حقيقي أو حفظ بيانات.</div>
       <p class="hint">تحقق من بيانات المالك والمستندات قبل أي اتفاق فعلي.</p>
     </section>
   </div>
