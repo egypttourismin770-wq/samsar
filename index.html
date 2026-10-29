@@ -2163,7 +2163,7 @@ methods:{
     }catch(error){console.error('Samsar viewing request failed:',error);this.toast('تعذر حفظ طلب المعاينة. تأكد أن العقار منشور وحاول مرة أخرى.');}
   },
   normalizeWhatsAppNumber(value){let phone=String(value||'').replace(/[^0-9]/g,'');if(phone.startsWith('00'))phone=phone.slice(2);if(phone.startsWith('0')&&phone.length===11)phone='20'+phone.slice(1);return /^[1-9][0-9]{7,14}$/.test(phone)?phone:'';},
-  customerWhatsAppLink(request){const phone=this.normalizeWhatsAppNumber(request?.phone);if(!phone)return '';const property=this.getProperty(request.propertyId);const date=request.date||'غير محدد';const time=request.time||'غير محدد';const meetingDetails=request.note?'\\nتفاصيل مكان المعاينة:\\n'+request.note:'';const message='أهلًا '+(request.customerName||'')+'، تم قبول طلب معاينة العقار '+(property?.title||'')+' رقم '+this.propertyCode(property)+' في '+date+' الساعة '+time+'.'+meetingDetails+'\\nفريق سمسار';return 'https://wa.me/'+phone+'?text='+encodeURIComponent(message);},
+  customerWhatsAppLink(request){const phone=this.normalizeWhatsAppNumber(request?.phone);if(!phone)return '';const property=this.getProperty(request.propertyId);const date=request.date||'غير محدد';const time=request.time||'غير محدد';const meetingDetails=request.note?'\nتفاصيل مكان المعاينة:\n'+request.note:'';const message='أهلًا '+(request.customerName||'')+'، تم قبول طلب معاينة العقار '+(property?.title||'')+' رقم '+this.propertyCode(property)+' في '+date+' الساعة '+time+'.'+meetingDetails+'\nفريق سمسار';return 'https://wa.me/'+phone+'?text='+encodeURIComponent(message);},
   async updateViewingStatus(request,status){
     if(request?.isBackendRecord){
       if(!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول أولًا.');return;}
