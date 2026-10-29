@@ -786,7 +786,10 @@ img{max-width:100%}
             </div>
             <div class="property-bottom">
               <div><strong class="property-price">{{ money(property.price) }}</strong><small>{{ property.transaction === 'إيجار' ? 'شهريًا' : 'السعر الإجمالي' }}</small></div>
-              <button class="details-button" @click="openProperty(property)">التفاصيل ←</button>
+              <div class="inline-actions">
+                <button class="details-button" @click="openProperty(property)">التفاصيل ←</button>
+                <button v-if="property.isBackendRecord && !property.isDemo && property.backendStatus === 'published'" type="button" class="primary-button" @click.stop="requestViewing(property)">طلب معاينة</button>
+              </div>
             </div>
           </div>
         </article>
@@ -1000,7 +1003,7 @@ img{max-width:100%}
         <div class="rating-buttons"><button v-for="star in 5" :key="star" :class="{selected: (userRatings[selectedProperty.id] || 0) >= star}" @click="rateProperty(selectedProperty,star)">★</button></div>
         <div class="rating-summary"><span class="stars">{{ starsText(selectedProperty.rating) }}</span><strong>{{ Number(selectedProperty.rating || 0).toFixed(1) }}</strong><small>({{ selectedProperty.reviews || 0 }} تقييم)</small></div>
       </div>
-      <div class="detail-footer"><div><small>التواصل عبر سمسار</small><strong>{{ selectedProperty.isDemo ? 'بيانات توضيحية فقط' : 'لا يظهر رقم المالك للعميل' }}</strong></div><div class="detail-actions"><button class="outline-light-button" @click="askAIForProperty(selectedProperty)">اسأل المساعد عن العقار</button><button v-if="!selectedProperty.isDemo" class="whatsapp-button" @click="startInquiry(selectedProperty)">استفسار عبر سمسار</button><button v-if="!selectedProperty.isDemo" class="primary-button" @click="requestViewing(selectedProperty)">احجز معاينة العقار ←</button></div></div>
+      <div class="detail-footer"><div><small>التواصل عبر سمسار</small><strong>{{ selectedProperty.isDemo ? 'بيانات توضيحية فقط' : 'لا يظهر رقم المالك للعميل' }}</strong></div><div class="detail-actions"><button class="outline-light-button" @click="askAIForProperty(selectedProperty)">اسأل المساعد عن العقار</button><button v-if="!selectedProperty.isDemo" class="whatsapp-button" @click="startInquiry(selectedProperty)">استفسار عبر سمسار</button><button v-if="selectedProperty.isBackendRecord && !selectedProperty.isDemo && selectedProperty.backendStatus === 'published'" type="button" class="primary-button" @click="requestViewing(selectedProperty)">احجز معاينة العقار ←</button></div></div>
       <div v-if="selectedProperty.isDemo" class="demo-info">إعلان وصور تجريبية لا تمثل عقارًا متاحًا فعليًا. الاستفسار والمعاينة غير متاحين لهذا الإعلان.</div>
       <p class="hint">تحقق من بيانات المالك والمستندات قبل أي اتفاق فعلي.</p>
     </section>
