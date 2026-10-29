@@ -814,8 +814,8 @@ img{max-width:100%}
 
     <!-- طلبات العميل -->
     <section v-if="!sessionUser || sessionUser.role === 'customer'" id="my-viewings" class="section tinted-section">
-      <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة ومتابعة الطلب</h2><p v-if="sessionUser">حساب العميل: {{ sessionUser.name }} · الهاتف: {{ sessionUser.phone || 'غير مسجل' }}</p><p v-else>تقدر تتابع طلب المعاينة بعد تسجيل الدخول بحساب العميل.</p></div></div>
-      <div class="order-lookup-label"><label>رقم الطلب لمتابعته<input v-model.trim="customerOrderLookup" placeholder="اكتب أول 8 خانات من رقم الطلب" maxlength="36" /></label><button type="button" class="primary-button" @click="trackCustomerOrder">متابعة الطلب</button></div><p v-if="customerOrderLookupMessage" class="hint">{{ customerOrderLookupMessage }}</p>
+      <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة ومتابعة الطلب</h2><p v-if="sessionUser">حساب العميل: {{ sessionUser.name }} · الهاتف: {{ sessionUser.phone || 'غير مسجل' }}</p><p v-else>اكتب رقم الطلب واضغط متابعة؛ لو مش مسجل دخول، هتدخل بحساب العميل وبعدها البحث هيكمل تلقائيًا.</p></div></div>
+      <div class="order-lookup-label"><label>رقم الطلب لمتابعته<input v-model.trim="customerOrderLookup" placeholder="اكتب أول 8 خانات من رقم الطلب" maxlength="36" autocomplete="off" /></label><button type="button" class="primary-button" @click="trackCustomerOrder">متابعة الطلب</button></div><p v-if="customerOrderLookupMessage" class="hint">{{ customerOrderLookupMessage }}</p>
       <div v-if="customerViewingsForLookup.length" class="record-grid">
         <article v-for="request in customerViewingsForLookup" :key="request.id" class="record-card">
           <div class="row-between"><strong>{{ getProperty(request.propertyId)?.title || 'عقار' }}</strong><span class="status-pill">{{ request.status }}</span></div>
@@ -1346,6 +1346,7 @@ data() {
     trackingOpen:false,
     customerOrderLookup:'',
     customerOrderLookupMessage:'',
+    customerOrderLookupPending:false,
     signupRequestedRole:'customer',
     signupAddress:'',
     adminListingSearch:'',
@@ -1652,6 +1653,10 @@ methods:{
             await this.loadBackendProfiles();
             if(this.sessionUser?.role==='admin')await this.loadPaymentAdminData();
             await this.loadAvailablePaymentMethods();
+            if(this.customerOrderLookupPending&&this.sessionUser?.role==='customer'){
+              this.customerOrderLookupPending=false;
+              await this.trackCustomerOrder();
+            }
             if(this.pendingInquiryPropertyId && this.sessionUser?.role==='customer'){
               const pendingId=this.pendingInquiryPropertyId;this.pendingInquiryPropertyId='';
               const pendingProperty=this.getProperty(pendingId);
@@ -1946,7 +1951,7 @@ methods:{
   async trackCustomerOrder(){
     const term=String(this.customerOrderLookup||'').trim();
     if(!term){this.customerOrderLookupMessage='اكتب رقم الطلب أولًا.';return;}
-    if(!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='customer'){this.customerOrderLookupMessage='سجّل الدخول بحساب العميل أولًا لعرض طلباتك بأمان.';this.openLogin();return;}
+    if(!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='customer'){this.customerOrderLookupPending=true;this.customerOrderLookupMessage='لخصوصية طلباتك، سجّل الدخول بحساب العميل مرة واحدة؛ هنكمل البحث تلقائيًا بعد الدخول.';this.openLogin();return;}
     try{await this.loadBackendViewings();const matches=this.customerViewings.filter(v=>String(v.id||'').toLowerCase().startsWith(term.toLowerCase())||String(v.id||'').slice(0,8).toLowerCase()===term.toLowerCase());this.customerOrderLookupMessage=matches.length?`تم العثور على ${matches.length} طلب مرتبط بحسابك.`:'مش لاقيين طلب بالرقم ده في حسابك. راجع أول 8 خانات من رقم الطلب.';this.$nextTick(()=>this.scrollTo('my-viewings'));}
     catch(error){console.error('Customer order tracking failed:',error);this.customerOrderLookupMessage='تعذر تحميل طلباتك الآن. جرّب مرة أخرى.';}
   },
