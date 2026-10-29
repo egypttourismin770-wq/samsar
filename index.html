@@ -902,7 +902,7 @@ img{max-width:100%}
       <h3 class="subheading">إعلاناتي</h3>
       <div v-if="ownerProperties.length" class="owner-list-grid">
         <article v-for="property in ownerProperties" :key="property.id" class="owner-card">
-          <img :src="property.photos[0] || fallbackImage" :alt="property.title" @error="onPropertyImageError" /><div v-else class="property-image-empty">📷<span>لا توجد صورة حقيقية مرفوعة</span></div>
+          <img v-if="property.photos[0]?.src || property.photos[0]" :src="property.photos[0]?.src || property.photos[0]" :alt="property.title" @error="onPropertyImageError" /><div v-else class="property-image-empty">📷<span>لا توجد صورة حقيقية مرفوعة</span></div>
           <div class="owner-card-content">
             <span class="status-pill">{{ property.status }}</span>
             <h4>{{ property.title }}</h4>
@@ -1118,7 +1118,7 @@ img{max-width:100%}
               </form>
             </div>
             <article v-for="property in filteredAdminProperties" :key="property.id" class="admin-list-item">
-              <img v-if="property.photos[0]?.src || property.photos[0]" :src="property.photos[0]?.src || property.photos[0]" @error="onImageError" />
+              <img v-if="property.photos[0]?.src || property.photos[0]" :src="property.photos[0]?.src || property.photos[0]" :alt="property.title" @error="onPropertyImageError" /><div v-else class="property-image-empty">📷<span>لا توجد صورة حقيقية مرفوعة</span></div>
               <div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>رقم العقار: {{ propertyCode(property) }}</small><small>{{ money(property.price) }} · {{ property.transaction }} · {{ property.isDemo?'تجريبي':'رسمي' }}</small></div>
               <select :value="property.isBackendRecord ? property.backendStatus : property.status" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft" :disabled="sessionUser?.role!=='admin'">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published" :disabled="sessionUser?.role!=='admin'">منشور</option><option value="rejected" :disabled="sessionUser?.role!=='admin'">مرفوض</option><option value="rented">مباع / مؤجر</option><option value="archived">مؤرشف / متوقف</option></select>
               <button class="outline-light-button" @click="openProperty(property)">عرض</button><button v-if="sessionUser?.role==='admin'" class="outline-light-button" @click="editListing(property)">تعديل</button><button v-if="sessionUser?.role==='admin'" class="danger-button" @click="deleteListing(property)">حذف</button>
