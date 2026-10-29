@@ -103,7 +103,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .property-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
 .property-card{min-width:0;overflow:hidden;border:1px solid #e7e8dc;border-radius:12px;background:#fff;box-shadow:0 4px 14px #263e2b08;transition:transform .2s,box-shadow .2s}
 .property-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px #193d2b14}
-.property-photo{position:relative;height:185px;overflow:hidden;cursor:pointer;background:#e2ece4}
+.property-photo{position:relative;height:245px;overflow:hidden;cursor:pointer;background:#e2ece4;isolation:isolate}
+.property-photo::after{content:'';position:absolute;inset:30% 0 0;z-index:1;background:linear-gradient(180deg,transparent 0%,#071b16b8 100%);pointer-events:none}
+.property-photo-overlay{position:absolute;z-index:2;right:14px;left:14px;bottom:14px;display:grid;gap:5px;color:#fff;text-align:right;pointer-events:none}
+.property-photo-overlay strong{font-size:17px;line-height:1.35;text-shadow:0 2px 8px #0008}
+.property-photo-overlay span{font-size:13px;font-weight:900;color:#fff2cc;text-shadow:0 2px 8px #0008}
+.property-photo>img{display:block}
 .property-photo>img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
 .property-image-empty{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#eef3ef,#e1e9e2);color:#536b5c;font-size:30px}.property-image-empty span{font-size:12px;font-weight:700}
 .property-card:hover .property-photo>img{transform:scale(1.035)}
@@ -633,7 +638,7 @@ img{max-width:100%}
       <button class="icon-button" title="الإشعارات" @click="notificationsOpen = !notificationsOpen">
         ♧<sup v-if="myNotifications.length">{{ myNotifications.length }}</sup>
       </button>
-      <button class="login-button" @click="sessionUser?.role==='owner' ? newListing() : openEntryChooser()">＋ إنشاء إعلان</button>
+      <button class="login-button" @click="(sessionUser?.role==='owner' || sessionUser?.requestedRole==='owner') ? newListing() : openEntryChooser()">＋ إنشاء إعلان</button>
     </div>
 
     <div v-if="notificationsOpen" class="notification-popover">
@@ -761,6 +766,7 @@ img{max-width:100%}
               {{ favorites.includes(property.id) ? '♥' : '♡' }}
             </button>
             <span class="photo-count">▧ {{ property.photos.length }} صور</span>
+            <div class="property-photo-overlay"><strong>{{ property.title }}</strong><span>{{ money(property.price) }} {{ property.transaction==='إيجار' ? 'جنيه / شهر' : 'جنيه' }}</span></div>
           </div>
 
           <div class="property-content">
@@ -833,7 +839,7 @@ img{max-width:100%}
     <section v-if="sessionUser && sessionUser.role === 'customer'" class="section tinted-section" id="my-ai-conversations"><div class="section-heading"><div><span class="eyebrow">سجل حسابك</span><h2>محادثاتي مع المساعد الذكي</h2><p>المحادثات الخارجية الناجحة تُحفظ هنا مع سياق الإعلان عند توفره.</p></div><button class="outline-light-button" @click="loadAIHistory">تحديث السجل</button></div><div v-if="aiHistoryBusy" class="muted">جارٍ تحميل المحادثات...</div><div v-else-if="aiConversations.length" class="record-grid"><article v-for="conversation in aiConversations" :key="conversation.id" class="inquiry-card"><h4>{{ conversation.propertyTitle || 'محادثة بحث عامة' }}</h4><div class="inquiry-meta"><span>{{ conversation.isDemo ? 'سياق إعلان تجريبي' : conversation.propertyId ? 'مرتبطة بإعلان' : 'بحث عام' }}</span><span>{{ conversation.lastMessageAt ? new Date(conversation.lastMessageAt).toLocaleString('ar-EG') : new Date(conversation.createdAt).toLocaleString('ar-EG') }}</span></div><button class="primary-button" @click="openSavedAIConversation(conversation)">عرض المحادثة والردود</button></article></div><div v-else class="empty-state">لا توجد محادثات ذكاء اصطناعي محفوظة. بعد تهيئة المساعد الخارجي وتسجيل الدخول، ستظهر المحادثات هنا.</div></section>
 
     <!-- مساحة المالك -->
-    <section v-if="sessionUser && sessionUser.role === 'owner'" id="owner-workspace" class="section tinted-section">
+    <section v-if="sessionUser && (sessionUser.role === 'owner' || sessionUser.requestedRole === 'owner')" id="owner-workspace" class="section tinted-section">
       <div class="section-heading">
         <div><span class="eyebrow">مساحة المالك</span><h2>إعلاناتي وطلبات المعاينة</h2><p>أضف عقاراتك وتابع طلبات المعاينة المرتبطة بها.</p></div>
         <button class="primary-button" @click="newListing">＋ إضافة عقار</button>
@@ -870,7 +876,7 @@ img{max-width:100%}
           <label class="wide-label">الخدمات القريبة<input v-model.trim="listingForm.amenitiesText" placeholder="مواصلات، مدارس، سوق..." /></label>
 
           <div class="upload-panel">
-            <div><strong>صور العقار — حتى 10 صور</strong><p class="muted">اضغط «اختيار صورة» لكل صورة على حدة. يمكنك إضافة حتى 10 صور، وتظهر معاينة كل صورة قبل الحفظ.</p></div>
+            <div><strong>صور العقار — حتى 10 صور</strong><p class="muted">أضف صورتين على الأقل (حتى 10 صور). أول صورة ستكون الصورة الرئيسية الظاهرة مباشرة على واجهة الإعلان، مع العنوان والسعر فوقها.</p></div>
             <label class="upload-trigger"><span>＋</span> اختيار صورة
               <input type="file" accept="image/*" @change="onListingImages" />
             </label>
@@ -882,7 +888,7 @@ img{max-width:100%}
                 <button type="button" @click="removeListingImage(index)" title="حذف الصورة">✕</button>
               </div>
             </div>
-            <p class="hint">في هذه النسخة، الصور محفوظة على المتصفح فقط وليست مرفوعة لخادم سحابي.</p>
+            <p class="hint">يتم رفع الصور إلى تخزين سمسار عند حفظ الإعلان، وتظهر الصورة الرئيسية مباشرة في بطاقة الإعلان بعد تحميلها.</p>
           </div>
 
           <div class="upload-panel">
@@ -1006,7 +1012,7 @@ img{max-width:100%}
         <button class="entry-choice customer-choice" @click="beginSignup('customer')"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
         <button class="entry-choice track-choice" @click="entryChooserOpen=false;trackingOpen=false;scrollTo('public-property-tracker')"><span>▤</span><strong>متابعة العقار والمعاينة</strong><small>اكتب رقم العقار في خانة واحدة، من غير كلمة مرور</small></button>
       </div>
-      <p class="hint">حساب صاحب العقار يبدأ بطلب اعتماد، ولا يحصل أي حساب جديد على صلاحيات الإدارة.</p>
+      <p class="hint">تقدر تجهّز مسودة الإعلان بعد تسجيل حساب صاحب العقار. نشره للعامة يظل بعد اعتماد المالك ومراجعة إثبات الدفع، ولا يحصل أي حساب جديد على صلاحيات الإدارة.</p>
     </section>
   </div>
 
@@ -1417,7 +1423,7 @@ computed:{
     });
   },
   ownerProperties(){
-    return this.sessionUser?.role==='owner'?this.properties.filter(p=>p.ownerEmail===this.sessionUser.email):[];
+    return (this.sessionUser?.role==='owner'||this.sessionUser?.requestedRole==='owner')?this.properties.filter(p=>p.ownerId===this.sessionUser.id||p.ownerEmail===this.sessionUser.email):[];
   },
   ownerViewings(){
     const ids=new Set(this.ownerProperties.map(p=>p.id));
@@ -1676,7 +1682,7 @@ methods:{
       const patch={};if(metadata.address_text&&!profile?.address_text)patch.address_text=metadata.address_text;if(metadata.requested_role==='owner'&&profile?.requested_role!=='owner')patch.requested_role='owner';
       if(Object.keys(patch).length&&profile){const {error:updateError}=await supabaseClient.from('profiles').update(patch).eq('id',user.id);if(updateError)console.warn('Profile contact details could not be synced:',updateError);else profile={...profile,...patch};}
     }catch(error){console.error('Could not load Samsar profile:',error);}
-    this.sessionUser={id:user.id,email:user.email||'',name:profile?.full_name||metadata.full_name||user.email||'مستخدم سمسار',phone:profile?.phone||user.phone||'',address:profile?.address_text||metadata.address_text||'',role:profile?.role||'customer',staffPermissions:profile?.staff_permissions||{},isSupabaseUser:true};
+    this.sessionUser={id:user.id,email:user.email||'',name:profile?.full_name||metadata.full_name||user.email||'مستخدم سمسار',phone:profile?.phone||user.phone||'',address:profile?.address_text||metadata.address_text||'',role:profile?.role||'customer',requestedRole:profile?.requested_role||metadata.requested_role||'',staffPermissions:profile?.staff_permissions||{},isSupabaseUser:true};
   },
   async loadBackendProperties(){
     if(!supabaseClient)return;
@@ -1736,7 +1742,7 @@ methods:{
     const field=document.createElement('textarea');field.value=number;field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';document.body.appendChild(field);field.select();let copied=false;try{copied=document.execCommand('copy');}catch{}field.remove();this.toast(copied?'تم نسخ رقم التحويل.':'تعذر النسخ تلقائيًا؛ حدّد الرقم وانسخه يدويًا.');
   },
   async submitListingFeePayment(){
-    if(this.sessionUser?.role!=='owner'||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب المالك المعتمد.');return;}
+    if(!(this.sessionUser?.role==='owner'||this.sessionUser?.requestedRole==='owner')||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب صاحب العقار لإرسال إثبات الدفع.');return;}
     const property=this.getProperty(this.pendingPaymentPropertyId);
     const method=this.availablePaymentMethods.find(item=>item.id===this.selectedPaymentMethodId);
     if(!property?.isBackendRecord||property.ownerId!==this.sessionUser.id){this.toast('لم يتم العثور على مسودة الإعلان الخاصة بحسابك.');return;}
@@ -1918,9 +1924,9 @@ methods:{
     this.entryChooserOpen=false;
     if(this.sessionUser?.isSupabaseUser){
       if(requested==='customer'&&this.sessionUser.role==='customer'){this.scrollTo('my-viewings');return;}
-      if(requested==='owner'&&this.sessionUser.role==='owner'){this.newListing();return;}
+      if(requested==='owner'&&(this.sessionUser.role==='owner'||this.sessionUser.requestedRole==='owner')){this.newListing();return;}
       if(requested==='owner'&&this.sessionUser.role==='customer'){
-        try{const {error}=await supabaseClient.from('profiles').update({requested_role:'owner'}).eq('id',this.sessionUser.id);if(error)throw error;this.toast('تم إرسال طلب اعتماد حسابك كصاحب عقار. بعد موافقة الأدمن هتقدر تنشر إعلاناتك.');}
+        try{const {error}=await supabaseClient.from('profiles').update({requested_role:'owner'}).eq('id',this.sessionUser.id);if(error)throw error;this.sessionUser.requestedRole='owner';this.toast('تقدر تجهّز مسودة إعلانك الآن؛ نشر الإعلان يظل بعد اعتماد المالك ومراجعة الدفع.');this.newListing();}
         catch(error){console.error(error);this.toast('تعذر إرسال طلب اعتماد المالك. حاول مرة أخرى.');}
         return;
       }
@@ -1939,7 +1945,7 @@ methods:{
         if(this.signupPhone.trim().length<7){this.loginError='اكتب رقم هاتف صحيحًا للتواصل.';return;}
         if(this.signupAddress.trim().length<4){this.loginError='اكتب عنوانك الأساسي.';return;}
         const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim(),requested_role:this.signupRequestedRole}}});if(error)throw error;
-        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء الحساب وطلب اعتمادك كصاحب عقار. الإدارة تعتمد الصلاحية قبل النشر.':'تم إنشاء حساب العميل بنجاح.');if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}else if(this.signupRequestedRole==='customer')this.$nextTick(()=>this.scrollTo('my-viewings'));if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
+        if(data.session){await this.syncAuthSession(data.session);await supabaseClient.from('profiles').update({full_name:this.signupName.trim(),phone:this.signupPhone.trim(),address_text:this.signupAddress.trim()}).eq('id',data.user.id);await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.toast(this.signupRequestedRole==='owner'?'تم إنشاء حساب صاحب العقار. يمكنك تجهيز المسودة الآن؛ النشر ينتظر اعتماد المالك ومراجعة الدفع.':'تم إنشاء حساب العميل بنجاح.');if(this.signupRequestedRole==='owner')this.$nextTick(()=>this.scrollTo('owner-workspace'));if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}else if(this.signupRequestedRole==='customer')this.$nextTick(()=>this.scrollTo('my-viewings'));if(['admin','employees','settings','staff'].includes(this.adminRouteMode))this.handleDashboardDeepLink();}
         else{this.authMode='signin';this.loginError='تم إرسال رسالة تأكيد إلى بريدك الإلكتروني. افتح الرسالة وأكّد الحساب، ثم سجّل الدخول. لو لم تصل، افحص مجلد الرسائل غير المرغوب فيها.';this.toast(this.signupRequestedRole==='owner'?'تم إرسال طلب إنشاء الحساب. أكّد بريدك الإلكتروني، وبعدها تنتظر موافقة الإدارة على حساب المالك.':'تم إرسال تعليمات تفعيل حساب العميل إلى بريدك الإلكتروني.');}
       }else{
         const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
@@ -2054,7 +2060,8 @@ methods:{
   },
   newListing(){
     const isAdmin=this.sessionUser?.role==='admin';
-    if(!isAdmin&&this.sessionUser?.role!=='owner'){this.toast('إضافة العقار متاحة لحساب المالك المعتمد أو مدير النظام.');return;}
+    const canPrepareOwnerDraft=this.sessionUser?.role==='owner'||this.sessionUser?.requestedRole==='owner';
+    if(!isAdmin&&!canPrepareOwnerDraft){this.toast('اختار «أنا صاحب عقار» وسجّل الدخول أولًا لتجهيز إعلانك.');this.openEntryChooser();return;}
     this.editingListingId='';this.adminListingStatus=isAdmin?'published':'draft';this.listingForm=this.emptyListingForm();this.listingForm.isDemo=isAdmin;this.listingFormOpen=true;
     if(!isAdmin)this.$nextTick(()=>this.scrollTo('owner-workspace'));
   },
@@ -2113,7 +2120,7 @@ methods:{
   },
   async saveListing(){
     const isAdmin=this.sessionUser?.role==='admin';
-    if((!isAdmin&&this.sessionUser?.role!=='owner')||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب مالك معتمد أو مدير النظام لحفظ الإعلان.');return;}
+    if((!isAdmin&&this.sessionUser?.role!=='owner'&&this.sessionUser?.requestedRole!=='owner')||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول واختر «أنا صاحب عقار» لتجهيز مسودة الإعلان.');return;}
     const f=this.listingForm;
     if(!f.title||!f.area||!f.neighborhood||!f.description||Number(f.price)<=0||Number(f.size)<=0){this.toast('راجع العنوان والمنطقة والوصف والسعر والمساحة.');return;}
     if(f.mapUrl&&!this.isValidUrl(f.mapUrl)){this.toast('رابط الخريطة غير صحيح.');return;}
