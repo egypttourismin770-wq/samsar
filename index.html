@@ -1150,7 +1150,7 @@ img{max-width:100%}
           </div>
 
           <div v-if="adminTab === 'listings'" class="admin-content">
-            <div class="row-between admin-listing-heading"><div><h3>إدارة كل الإعلانات</h3><p class="muted">الإعلانات الرسمية والتجريبية؛ تعديل الاسم والسعر والتفاصيل والصور من نفس الصفحة.</p></div><button type="button" v-if="sessionUser?.role==='admin'" class="primary-button" @click="newListing">＋ إضافة إعلان</button></div>
+            <div class="row-between admin-listing-heading"><div><h3>إدارة كل الإعلانات</h3><p class="muted">الإعلانات الرسمية والتجريبية؛ تعديل الاسم والسعر والتفاصيل والصور من نفس الصفحة.</p></div><div v-if="sessionUser?.role==='admin'" class="inline-actions"><button type="button" class="outline-light-button" @click="newAdminListing(true)">＋ إعلان تجريبي</button><button type="button" class="primary-button" @click="newAdminListing(false)">＋ إعلان رسمي</button></div></div>
             <div class="admin-list-filters"><input v-model.trim="adminListingSearch" placeholder="ابحث بالاسم أو المنطقة أو رقم الإعلان" /><select v-model="adminListingFilter"><option value="all">كل الإعلانات</option><option value="demo">تجريبية</option><option value="real">رسمية</option><option value="published">منشورة</option><option value="sold">مباع / مؤجر</option></select></div>
             <div v-if="listingFormOpen && sessionUser?.role==='admin'" class="form-panel admin-listing-editor">
               <div class="row-between"><div><span class="eyebrow">تحكم الإدارة</span><h3>{{ editingListingId ? 'تعديل الإعلان وكل بياناته' : 'إضافة إعلان جديد' }}</h3></div><button type="button" class="close-button" @click="cancelListingForm">✕</button></div>
@@ -2181,6 +2181,12 @@ methods:{
     if(!this.alternateDate||this.alternateDate<this.today){this.toast('اختار تاريخًا صحيحًا.');return;}
     if(request?.isBackendRecord){try{const proposed=new Date(this.alternateDate+'T'+(this.alternateTime||'16:00')+':00').toISOString();const {error}=await supabaseClient.from('viewing_requests').update({status:'owner_proposed',owner_proposed_scheduled_at:proposed}).eq('id',request.id);if(error)throw error;await this.loadBackendViewings();this.alternateFormId='';this.toast('تم إرسال الموعد البديل إلى العميل.');}catch(error){console.error(error);this.toast('تعذر إرسال الموعد البديل؛ راجع صلاحيات المالك.');}return;}
     const row=this.viewings.find(v=>v.id===request.id);if(!row)return;row.alternateDate=this.alternateDate;row.alternateTime=this.alternateTime;row.status='موعد بديل مقترح';this.alternateFormId='';this.persistDemo();this.toast('تم تسجيل الموعد البديل محليًا فقط.');
+  },
+  newAdminListing(isDemo){
+    if(this.sessionUser?.role!=='admin'){this.toast('إضافة الإعلانات من لوحة الإدارة متاحة لمدير النظام فقط.');return;}
+    this.newListing();
+    this.listingForm.isDemo=!!isDemo;
+    this.adminListingStatus='published';
   },
   newListing(){
     const isAdmin=this.sessionUser?.role==='admin';
