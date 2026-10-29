@@ -2417,19 +2417,21 @@ samsarVueApp.config.errorHandler = function (error, instance, info) {
 };
 var samsarAppProxy = samsarVueApp.mount('#app');
 document.addEventListener('click', function (event) {
-  var button = event.target && event.target.closest ? event.target.closest('[data-samsar-action]') : null;
-  if (!button || !samsarAppProxy) return;
+  var target = event.target;
+  var button = target && target.closest ? target.closest('[data-samsar-action]') : null;
+  if (!button) return;
   var action = button.getAttribute('data-samsar-action');
+  if (!['open-entry', 'owner', 'customer', 'track'].includes(action)) return;
+  event.preventDefault();
+  event.stopPropagation();
   try {
+    if (!samsarAppProxy) throw new Error('Vue app instance is not available');
     if (action === 'open-entry') {
-      event.preventDefault();
       if (samsarAppProxy.sessionUser && (samsarAppProxy.sessionUser.role === 'owner' || samsarAppProxy.sessionUser.requestedRole === 'owner')) samsarAppProxy.newListing();
       else samsarAppProxy.openEntryChooser();
     } else if (action === 'owner' || action === 'customer') {
-      event.preventDefault();
       samsarAppProxy.chooseEntryRole(action);
     } else if (action === 'track') {
-      event.preventDefault();
       samsarAppProxy.choosePublicTracking();
     }
   } catch (error) {
@@ -2437,7 +2439,7 @@ document.addEventListener('click', function (event) {
     if (window.showSamsarRuntimeError) window.showSamsarRuntimeError('تعذّر تنفيذ زر الخدمة: ' + (error && (error.stack || error.message) ? (error.stack || error.message) : String(error)));
     else alert('تعذر تنفيذ الزر. حدّث الصفحة وحاول مرة أخرى.');
   }
-});
+}, true);
 
 </script>
 </body>
