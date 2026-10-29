@@ -2158,7 +2158,7 @@ methods:{
     try{
       const scheduledAt=new Date(form.date+'T'+(form.time||'16:00')+':00').toISOString();
       const noteParts=['مكان المعاينة: '+form.meetingPlace.trim()];if(form.mapLink)noteParts.push('لوكيشن خرائط Google: '+form.mapLink.trim());if(form.note?.trim())noteParts.push('ملاحظات العميل: '+form.note.trim());
-      const {error}=await supabaseClient.from('viewing_requests').insert({property_id:property.id,customer_id:this.sessionUser.id,owner_id:property.ownerId,customer_name:form.customerName,customer_phone:form.phone,scheduled_at:scheduledAt,customer_note:noteParts.join('\\n'),status:'requested'});
+      const {error}=await supabaseClient.from('viewing_requests').insert({property_id:property.id,customer_id:this.sessionUser.id,owner_id:property.ownerId,customer_name:form.customerName,customer_phone:form.phone,scheduled_at:scheduledAt,customer_note:noteParts.join('\n'),status:'requested'});
       if(error)throw error;await this.loadBackendViewings();this.viewingOpen=false;this.toast('تم إرسال طلب المعاينة إلى قاعدة البيانات.');
     }catch(error){console.error('Samsar viewing request failed:',error);this.toast('تعذر حفظ طلب المعاينة. تأكد أن العقار منشور وحاول مرة أخرى.');}
   },
