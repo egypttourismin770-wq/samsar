@@ -639,7 +639,7 @@ img{max-width:100%}
       <button class="icon-button" title="الإشعارات" @click="notificationsOpen = !notificationsOpen">
         ♧<sup v-if="myNotifications.length">{{ myNotifications.length }}</sup>
       </button>
-      <button class="login-button" data-samsar-action="open-entry">＋ إنشاء إعلان لصاحب العقار</button>
+      <button type="button" class="login-button" @click="startListingEntry">＋ إنشاء إعلان لصاحب العقار</button>
     </div>
 
     <div v-if="notificationsOpen" class="notification-popover">
@@ -1011,11 +1011,29 @@ img{max-width:100%}
     <section class="modal login-modal entry-chooser">
       <div class="modal-heading"><div><span class="eyebrow">ابدأ مع سمسار</span><h2>إيه اللي محتاجه؟</h2></div><button class="close-button" @click="entryChooserOpen=false">✕</button></div>
       <div class="entry-choice-grid">
-        <button type="button" class="entry-choice owner-choice" data-samsar-action="owner"><span>⌂</span><strong>أنا صاحب عقار</strong><small>سجّل بياناتك ثم جهّز إعلانك وصوره</small></button>
-        <button type="button" class="entry-choice customer-choice" data-samsar-action="customer"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
-        <button type="button" class="entry-choice track-choice" data-samsar-action="track"><span>▤</span><strong>متابعة العقار والمعاينة</strong><small>اكتب رقم العقار في خانة واحدة، من غير كلمة مرور</small></button>
+        <button type="button" class="entry-choice owner-choice" @click="chooseEntryRole('owner')"><span>⌂</span><strong>أنا صاحب عقار</strong><small>سجّل بياناتك ثم جهّز إعلانك وصوره</small></button>
+        <button type="button" class="entry-choice customer-choice" @click="chooseEntryRole('customer')"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
+        <button type="button" class="entry-choice track-choice" @click="choosePublicTracking"><span>▤</span><strong>متابعة العقار والمعاينة</strong><small>اكتب رقم العقار في خانة واحدة، من غير كلمة مرور</small></button>
       </div>
       <p class="hint">تقدر تجهّز مسودة الإعلان بعد تسجيل حساب صاحب العقار. نشره للعامة يظل بعد اعتماد المالك ومراجعة إثبات الدفع، ولا يحصل أي حساب جديد على صلاحيات الإدارة.</p>
+    </section>
+  </div>
+
+  <div v-if="trackingOpen" id="samsar-tracking-modal" class="overlay" @click.self="trackingOpen=false">
+    <section class="modal login-modal tracking-modal" role="dialog" aria-modal="true" aria-labelledby="tracking-modal-title">
+      <div class="modal-heading"><div><span class="eyebrow">متابعة سمسار</span><h2 id="tracking-modal-title">تفاصيل العقار والمعاينة</h2></div><button type="button" class="close-button" aria-label="إغلاق" @click="trackingOpen=false">✕</button></div>
+      <p class="muted">اكتب رقم العقار الذي حصلت عليه من المساعد الذكي لعرض بياناته وحالة المعاينة المتاحة.</p>
+      <form @submit.prevent="lookupPropertyByCode" class="property-code-form">
+        <input v-model.trim="propertyCodeLookup" required placeholder="اكتب رقم العقار، مثال: 1 أو 10 أو 20" aria-label="رقم العقار" />
+        <button type="submit" class="primary-button">عرض التفاصيل</button>
+      </form>
+      <p v-if="propertyLookupError" class="error-message">{{ propertyLookupError }}</p>
+      <article v-if="trackedProperty" class="public-tracking-result">
+        <div class="tracking-result-heading"><img :src="trackedProperty.photos?.[0] || fallbackImage" :alt="trackedProperty.title" @error="onImageError" /><div><h3>{{ trackedProperty.title }}</h3><p>رقم العقار: <strong>{{ propertyCode(trackedProperty) }}</strong></p><p>{{ trackedProperty.area }} — {{ trackedProperty.neighborhood }}</p><strong>{{ money(trackedProperty.price) }} {{ trackedProperty.transaction==='إيجار' ? 'شهريًا' : '' }}</strong></div></div>
+        <div class="tracking-result-grid"><p><span>حالة الإعلان</span><strong>{{ trackingListingStatus(trackedProperty) }}</strong></p><p><span>المساحة</span><strong>{{ trackedProperty.size }} م²</strong></p><p><span>الغرف</span><strong>{{ trackedProperty.bedrooms || 0 }}</strong></p><p><span>الحمامات</span><strong>{{ trackedProperty.bathrooms || 0 }}</strong></p><p><span>العنوان</span><strong>{{ trackedProperty.address || trackedProperty.neighborhood || '—' }}</strong></p><p><span>الخدمات القريبة</span><strong>{{ (trackedProperty.amenities || []).join('، ') || '—' }}</strong></p></div>
+        <p class="tracking-description">{{ trackedProperty.description }}</p>
+        <div class="tracking-viewing-status"><strong>حالة طلب المعاينة</strong><span>{{ trackedViewingStatus || 'لا توجد حالة معاينة عامة متاحة لهذا العقار.' }}</span></div>
+      </article>
     </section>
   </div>
 
@@ -1938,14 +1956,17 @@ methods:{
     try{await this.beginSignup(role);}
     catch(error){console.error('Samsar entry choice failed:',error);this.toast('تعذر فتح التسجيل الآن. حدّث الصفحة وحاول مرة أخرى.');}
   },
+  startListingEntry(){
+    if(this.sessionUser && (this.sessionUser.role==='owner'||this.sessionUser.requestedRole==='owner')){this.newListing();return;}
+    this.entryChooserOpen=true;
+  },
   choosePublicTracking(){
     this.entryChooserOpen=false;
-    this.trackingOpen=false;
-    this.$nextTick(()=>{
-      const target=document.getElementById('public-property-tracker');
-      if(target){target.scrollIntoView({behavior:'smooth',block:'center'});const input=target.querySelector('input');if(input)input.focus({preventScroll:true});}
-      else this.toast('مش قادرين نفتح متابعة العقار دلوقتي. حدّث الصفحة وحاول تاني.');
-    });
+    this.propertyLookupError='';
+    this.trackedProperty=null;
+    this.trackedViewingRequest=null;
+    this.trackingOpen=true;
+    this.$nextTick(()=>{const input=document.querySelector('#samsar-tracking-modal input');if(input)input.focus({preventScroll:true});});
   },
   async beginSignup(role){
     const requested=role==='owner'?'owner':'customer';
@@ -2415,31 +2436,7 @@ var samsarVueApp = Vue.createApp(SamsarApp);
 samsarVueApp.config.errorHandler = function (error, instance, info) {
   window.showSamsarRuntimeError('Vue ' + info + ': ' + (error && (error.stack || error.message) ? (error.stack || error.message) : String(error)));
 };
-var samsarAppProxy = samsarVueApp.mount('#app');
-document.addEventListener('click', function (event) {
-  var target = event.target;
-  var button = target && target.closest ? target.closest('[data-samsar-action]') : null;
-  if (!button) return;
-  var action = button.getAttribute('data-samsar-action');
-  if (!['open-entry', 'owner', 'customer', 'track'].includes(action)) return;
-  event.preventDefault();
-  event.stopPropagation();
-  try {
-    if (!samsarAppProxy) throw new Error('Vue app instance is not available');
-    if (action === 'open-entry') {
-      if (samsarAppProxy.sessionUser && (samsarAppProxy.sessionUser.role === 'owner' || samsarAppProxy.sessionUser.requestedRole === 'owner')) samsarAppProxy.newListing();
-      else samsarAppProxy.openEntryChooser();
-    } else if (action === 'owner' || action === 'customer') {
-      samsarAppProxy.chooseEntryRole(action);
-    } else if (action === 'track') {
-      samsarAppProxy.choosePublicTracking();
-    }
-  } catch (error) {
-    console.error('Samsar entry button failed:', error);
-    if (window.showSamsarRuntimeError) window.showSamsarRuntimeError('تعذّر تنفيذ زر الخدمة: ' + (error && (error.stack || error.message) ? (error.stack || error.message) : String(error)));
-    else alert('تعذر تنفيذ الزر. حدّث الصفحة وحاول مرة أخرى.');
-  }
-}, true);
+samsarVueApp.mount('#app');
 
 </script>
 </body>
