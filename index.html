@@ -1704,7 +1704,7 @@ methods:{
         setTimeout(async()=>{
           try{
             await this.syncAuthSession(session);
-            if(session&&!['admin','employees','settings','staff'].includes(this.adminRouteMode)){this.loginOpen=false;if(this.sessionUser?.requestedRole==='owner')this.$nextTick(()=>this.scrollTo('owner-workspace'));else if(this.sessionUser?.role==='customer'&&this.pendingPropertyId){const pending=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(pending)this.openViewingModal(pending);}}
+            if(session&&!['admin','employees','settings','staff'].includes(this.adminRouteMode)){this.loginOpen=false;if(this.sessionUser?.requestedRole==='owner'){if(!this.listingFormOpen)this.newListing();this.$nextTick(()=>this.scrollTo('owner-workspace'));}else if(this.sessionUser?.role==='customer'&&this.pendingPropertyId){const pending=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(pending)this.openViewingModal(pending);}}
             await this.loadBackendProperties();
             await this.loadPublicSettings();
             await this.loadBackendViewings();
