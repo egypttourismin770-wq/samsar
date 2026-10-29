@@ -1067,8 +1067,10 @@ img{max-width:100%}
       <form @submit.prevent="submitViewing" class="login-form">
         <label>الاسم بالكامل *<input v-model.trim="viewingForm.customerName" required maxlength="100" /></label>
         <label>رقم الهاتف *<input v-model.trim="viewingForm.phone" type="tel" required maxlength="25" /></label>
+        <label>مكان المقابلة أو نقطة التجمع *<input v-model.trim="viewingForm.meetingPlace" required maxlength="250" placeholder="مثال: أمام مدخل العمارة أو عنوان قريب" /></label>
+        <label>رابط اللوكيشن على خرائط Google (اختياري)<input v-model.trim="viewingForm.mapLink" type="url" maxlength="500" placeholder="https://maps.google.com/..." /></label>
         <div class="form-grid"><label>التاريخ المفضل *<input v-model="viewingForm.date" type="date" :min="today" required /></label><label>الوقت المفضل *<select v-model="viewingForm.time"><option>10:00</option><option>12:00</option><option>14:00</option><option>16:00</option><option>18:00</option></select></label></div>
-        <label>ملاحظات<textarea v-model.trim="viewingForm.note" maxlength="500" rows="3"></textarea></label>
+        <label>ملاحظات إضافية<textarea v-model.trim="viewingForm.note" maxlength="500" rows="3"></textarea></label>
         <div class="policy-note">هذا طلب لتنسيق موعد المعاينة، وليس تأكيدًا نهائيًا. سيتم إرسال الطلب إلى النظام لمراجعته والتواصل معك بشأن الموعد.</div>
         <button class="primary-button full-width" type="submit">إرسال طلب حجز المعاينة</button>
       </form>
@@ -1586,7 +1588,7 @@ methods:{
   emptyListingForm(){
     return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',addressText:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:'',isDemo:false};
   },
-  emptyViewingForm(){return {customerName:'',phone:'',date:'',time:'16:00',note:''};},
+  emptyViewingForm(){return {customerName:'',phone:'',meetingPlace:'',mapLink:'',date:'',time:'16:00',note:''};},
   toggleLanguage(){
     this.currentLanguage=this.currentLanguage==='ar'?'en':'ar';
     document.documentElement.lang=this.currentLanguage;document.documentElement.dir=this.currentLanguage==='ar'?'rtl':'ltr';
@@ -2151,10 +2153,12 @@ methods:{
     if(property?.isDemo){this.toast('ده نموذج تجريبي فقط؛ لن يتم إرسال طلب حقيقي أو حفظ بيانات.');return;}
     if(this.sessionUser?.role!=='customer'||!this.sessionUser?.isSupabaseUser){this.toast('سجّل الدخول بحساب عميل حقيقي لإرسال الطلب.');return;}
     const form=this.viewingForm;
-    if(!property?.isBackendRecord||!form.customerName||!form.phone||!form.date||form.date<this.today){this.toast('راجع البيانات واختار تاريخًا صحيحًا لعقار منشور.');return;}
+    if(!property?.isBackendRecord||!form.customerName||!form.phone||!form.meetingPlace||!form.date||form.date<this.today){this.toast('راجع بياناتك، وحدد مكان المقابلة وتاريخًا صحيحًا لعقار منشور.');return;}
+    if(form.mapLink&&!/^https:\/\/(www\.)?(google\.[^/]+\/maps|maps\.google\.[^/]+|maps\.app\.goo\.gl)\//i.test(form.mapLink)){this.toast('رابط اللوكيشن لازم يكون رابط خرائط Google يبدأ بـ https://');return;}
     try{
       const scheduledAt=new Date(form.date+'T'+(form.time||'16:00')+':00').toISOString();
-      const {error}=await supabaseClient.from('viewing_requests').insert({property_id:property.id,customer_id:this.sessionUser.id,owner_id:property.ownerId,customer_name:form.customerName,customer_phone:form.phone,scheduled_at:scheduledAt,customer_note:form.note||null,status:'requested'});
+      const noteParts=['مكان المعاينة: '+form.meetingPlace.trim()];if(form.mapLink)noteParts.push('لوكيشن خرائط Google: '+form.mapLink.trim());if(form.note?.trim())noteParts.push('ملاحظات العميل: '+form.note.trim());
+      const {error}=await supabaseClient.from('viewing_requests').insert({property_id:property.id,customer_id:this.sessionUser.id,owner_id:property.ownerId,customer_name:form.customerName,customer_phone:form.phone,scheduled_at:scheduledAt,customer_note:noteParts.join('\\n'),status:'requested'});
       if(error)throw error;await this.loadBackendViewings();this.viewingOpen=false;this.toast('تم إرسال طلب المعاينة إلى قاعدة البيانات.');
     }catch(error){console.error('Samsar viewing request failed:',error);this.toast('تعذر حفظ طلب المعاينة. تأكد أن العقار منشور وحاول مرة أخرى.');}
   },
