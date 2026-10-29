@@ -813,8 +813,8 @@ img{max-width:100%}
     </section>
 
     <!-- طلبات العميل -->
-    <section v-if="sessionUser && sessionUser.role === 'customer'" id="my-viewings" class="section tinted-section">
-      <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة ومتابعة الطلب</h2><p>حساب العميل: {{ sessionUser.name }} · الهاتف: {{ sessionUser.phone || 'غير مسجل' }} · العنوان: {{ sessionUser.address || 'غير مسجل' }}</p></div></div>
+    <section v-if="!sessionUser || sessionUser.role === 'customer'" id="my-viewings" class="section tinted-section">
+      <div class="section-heading"><div><span class="eyebrow">تابع خطواتك</span><h2>طلبات المعاينة ومتابعة الطلب</h2><p v-if="sessionUser">حساب العميل: {{ sessionUser.name }} · الهاتف: {{ sessionUser.phone || 'غير مسجل' }}</p><p v-else>تقدر تتابع طلب المعاينة بعد تسجيل الدخول بحساب العميل.</p></div></div>
       <div class="order-lookup-label"><label>رقم الطلب لمتابعته<input v-model.trim="customerOrderLookup" placeholder="اكتب أول 8 خانات من رقم الطلب" maxlength="36" /></label><button type="button" class="primary-button" @click="trackCustomerOrder">متابعة الطلب</button></div><p v-if="customerOrderLookupMessage" class="hint">{{ customerOrderLookupMessage }}</p>
       <div v-if="customerViewingsForLookup.length" class="record-grid">
         <article v-for="request in customerViewingsForLookup" :key="request.id" class="record-card">
@@ -830,7 +830,7 @@ img{max-width:100%}
           </div>
         </article>
       </div>
-      <div v-else class="empty-state">{{ customerOrderLookup ? 'مش لاقيين طلب بالرقم ده في حسابك.' : 'لسه ما قدمتش طلبات معاينة.' }}</div>
+      <div v-else class="empty-state">{{ !sessionUser ? 'سجّل الدخول بحساب العميل لمشاهدة حالة الطلبات.' : (customerOrderLookup ? 'مش لاقيين طلب بالرقم ده في حسابك.' : 'لسه ما قدمتش طلبات معاينة.') }}</div>
     </section>
 
     <!-- استفسارات العميل المسجلة على حسابه -->
