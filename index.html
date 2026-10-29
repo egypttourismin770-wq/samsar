@@ -1044,18 +1044,17 @@ img{max-width:100%}
   <div v-if="loginOpen" class="overlay" :class="{'workspace-login':['admin','employees','settings','staff'].includes(adminRouteMode)}" @click.self="closeLogin">
     <section class="modal login-modal">
       <div class="modal-heading"><div><span class="eyebrow">أهلًا بيك في سمسار</span><h2>{{ adminRouteMode === 'staff' ? 'دخول مساحة الموظفين' : (['admin','employees','settings'].includes(adminRouteMode) ? 'دخول مساحة الإدارة' : 'تسجيل الدخول') }}</h2></div><button type="button" v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="close-button" @click="closeLogin">✕</button></div>
-      <p class="muted">{{ ['admin','employees','settings','staff'].includes(adminRouteMode) ? 'أدخل البريد الإلكتروني وكلمة المرور المعتمدين لهذه المساحة.' : (authMode === 'signup' ? 'سجّل اسمك وبريدك الإلكتروني ورقم هاتفك فقط. سنرسل رابط دخول آمن إلى بريدك.' : 'اكتب بريدك الإلكتروني وسنرسل لك رابط دخول آمن؛ لا تحتاج إلى كلمة مرور.') }}</p>
+      <p class="muted">{{ ['admin','employees','settings','staff'].includes(adminRouteMode) ? 'أدخل البريد الإلكتروني وكلمة المرور المعتمدين لهذه المساحة.' : (authMode === 'signup' ? 'سجّل اسمك ورقم موبايلك وأنشئ كلمة مرور لحسابك.' : 'اكتب رقم الموبايل وكلمة المرور للدخول.') }}</p>
       <form @submit.prevent="login" class="login-form">
-        <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
-        <label v-if="authMode === 'signup'">رقم الهاتف *<input v-model.trim="signupPhone" type="tel" required maxlength="25" autocomplete="tel" /></label>
-        
-        <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required :autocomplete="adminRouteMode === 'staff' ? 'off' : 'username'" :name="adminRouteMode === 'staff' ? 'staff-login-email' : 'email'" /></label>
-        <label v-if="['admin','employees','settings','staff'].includes(adminRouteMode)">كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" autocomplete="current-password" :name="adminRouteMode === 'staff' ? 'staff-login-password' : 'admin-login-password'" /></label>
+        <label v-if="authMode === 'signup' && !['admin','employees','settings','staff'].includes(adminRouteMode)">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
+        <label v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)">رقم الموبايل<input v-model.trim="signupPhone" type="tel" required maxlength="25" autocomplete="tel" /></label>
+        <label v-if="['admin','employees','settings','staff'].includes(adminRouteMode)">البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required autocomplete="username" /></label>
+        <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="authMode === 'signup' && !['admin','employees','settings','staff'].includes(adminRouteMode) ? 'new-password' : 'current-password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
-        <button type="submit" class="primary-button full-width" :disabled="authBusy">{{ authBusy ? 'جاري الاتصال...' : (['admin','employees','settings','staff'].includes(adminRouteMode) ? 'دخول للحساب' : (authMode === 'signup' ? 'إنشاء الحساب وإرسال رابط الدخول' : 'إرسال رابط الدخول إلى البريد')) }}</button>
+        <button type="submit" class="primary-button full-width" :disabled="authBusy">{{ authBusy ? 'جاري الاتصال...' : (['admin','employees','settings','staff'].includes(adminRouteMode) ? 'دخول للحساب' : (authMode === 'signup' ? 'إنشاء الحساب' : 'تسجيل الدخول')) }}</button>
         <button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
       </form>
-      <p v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="hint">{{ signupRequestedRole==='owner' ? 'سيتم تسجيل طلب صاحب العقار، وتظل صلاحية نشر الإعلانات خاضعة لاعتماد الإدارة.' : 'حساب العميل يتيح متابعة طلباته. لا يمكن منح صلاحيات المالك أو الإدارة من التسجيل العام.' }} رابط الدخول صالح عبر البريد الإلكتروني؛ لا تشارك الرابط مع أي شخص.</p>
+      <p v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="hint">{{ signupRequestedRole==='owner' ? 'سيتم تسجيل طلب صاحب العقار، وتظل صلاحية نشر الإعلانات خاضعة لاعتماد الإدارة.' : 'حساب العميل يتيح متابعة طلباته. لا يمكن منح صلاحيات المالك أو الإدارة من التسجيل العام.' }} التسجيل لا يتطلب بريدًا إلكترونيًا أو رسالة تأكيد.</p>
     </section>
   </div>
 
@@ -2053,28 +2052,30 @@ methods:{
      const restricted=['admin','employees','settings','staff'].includes(this.adminRouteMode);
      if(restricted&&this.authMode==='signup'){this.authMode='signin';this.loginError='إنشاء الحسابات من هذه البوابة غير مسموح. اطلب من الأدمن إنشاء حسابك.';return;}
      if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
-     const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password;this.loginError='';
+     const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password,phone=this.signupPhone.trim().replace(/[\\s()-]/g,'');this.loginError='';
      if(this.authBusy)return;
+     if(!restricted&&(!phone||phone.replace(/\\D/g,'').length<7)){this.loginError='اكتب رقم موبايل صحيحًا.';return;}
+     if(!password||password.length<8){this.loginError='كلمة المرور يجب ألا تقل عن 8 أحرف.';return;}
+     if(restricted&&!email){this.loginError='أدخل البريد الإلكتروني.';return;}
+     if(!restricted&&this.authMode==='signup'&&this.signupName.trim().length<2){this.loginError='اكتب اسمك بالكامل.';return;}
      this.authBusy=true;this.toast('جاري الاتصال بخدمة التسجيل...');
      try{
        if(!restricted){
-         if(!email){this.loginError='اكتب البريد الإلكتروني.';return;}
          if(this.authMode==='signup'){
-           if(this.signupName.trim().length<2){this.loginError='اكتب اسمك بالكامل.';return;}
-           if(this.signupPhone.trim().replace(/\D/g,'').length<7){this.loginError='اكتب رقم هاتف صحيحًا للتواصل.';return;}
-           const {error}=await supabaseClient.auth.signInWithOtp({email,options:{shouldCreateUser:true,data:{full_name:this.signupName.trim(),phone:this.signupPhone.trim(),requested_role:this.signupRequestedRole}}});if(error)throw error;
-           this.authMode='signin';this.loginError='';this.toast('تم إرسال رابط آمن إلى بريدك. افتح الرسالة من نفس الجهاز لإكمال التسجيل والدخول.');
-           this.loginForm={email:'',password:''};return;
+           const {data,error}=await supabaseClient.auth.signUp({phone,password,options:{data:{full_name:this.signupName.trim(),phone,requested_role:this.signupRequestedRole}}});
+           if(error)throw error;
+           if(!data?.session)throw new Error('تعذر إكمال التسجيل مباشرة. تأكد من تعطيل تأكيد الهاتف في إعدادات Supabase Auth ثم حاول مرة أخرى.');
+           await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();
+           this.authMode='signin';this.loginOpen=false;this.loginForm={email:'',password:''};this.toast('تم إنشاء الحساب وتسجيل الدخول بنجاح.');return;
          }
-         const {error}=await supabaseClient.auth.signInWithOtp({email,options:{shouldCreateUser:false}});if(error)throw error;
-         this.loginError='';this.toast('تم إرسال رابط الدخول إلى بريدك الإلكتروني. افتح الرسالة لإكمال الدخول.');this.loginForm={email:'',password:''};return;
+         const {data,error}=await supabaseClient.auth.signInWithPassword({phone,password});if(error)throw error;
+         await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');
+         if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
+         else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
+         this.loginForm={email:'',password:''};return;
        }
-       if(!email||!password){this.loginError='أدخل البريد الإلكتروني وكلمة المرور.';return;}
        const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
-       await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');
-       if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
-       else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
-       this.loginForm={email:'',password:''};
+       await this.syncAuthSession(data.session);await this.loadBackendProperties();await this.loadBackendViewings();await this.loadBackendProfiles();this.loginOpen=false;this.handleDashboardDeepLink();this.toast('تم تسجيل الدخول بنجاح.');this.loginForm={email:'',password:''};
      }catch(error){console.error('Samsar authentication failed:',error);this.loginError=error?.message||'تعذر إكمال العملية. راجع البيانات وحاول مرة أخرى.';this.toast('فشل التسجيل: '+this.loginError);}
      finally{this.authBusy=false;}
    },
