@@ -736,7 +736,7 @@ img{max-width:100%}
           <p>قارن الصور والمساحات والأسعار والتقييمات قبل طلب المعاينة.</p>
         </div>
         <button type="button" v-if="showFavorites" class="outline-light-button" @click="showFavorites = false">عرض كل العقارات</button>
-        <span v-else class="demo-badge">بيانات عرض تجريبية</span>
+        <span v-else-if="dataMode==='demo'" class="demo-badge">بيانات عرض تجريبية</span>
       </div>
 
       <div class="property-tools">
@@ -1329,7 +1329,7 @@ template:'#samsar-tpl',
 data() {
   return {
     fallbackImage,
-    properties:defaultProperties().map(p=>({...p,isDemo:true})),
+    properties:[],
     viewings:[],
     favorites:[],
     userRatings:{},
@@ -1670,7 +1670,6 @@ methods:{
       const raw=localStorage.getItem(STORAGE_KEY);
       if(!raw)return;
       const saved=JSON.parse(raw);
-      if(Array.isArray(saved.properties))this.properties=saved.properties.map(p=>({...p,isDemo:!p.isBackendRecord,photos:Array.isArray(p.photos)&&p.photos.length?p.photos.map(photo=>typeof photo==='string'?{key:makeId('photo'),src:photo}:photo):[{key:makeId('photo'),src:this.fallbackImage}],amenities:Array.isArray(p.amenities)?p.amenities:[]}));
       if(Array.isArray(saved.viewings))this.viewings=saved.viewings;
       if(Array.isArray(saved.favorites))this.favorites=saved.favorites;
       if(saved.userRatings)this.userRatings=saved.userRatings;
@@ -1686,7 +1685,7 @@ methods:{
     }
   },
   async initializeBackend(){
-    if(!supabaseClient){this.backendAvailable=false;this.backendError='تعذر تحميل مكتبة الاتصال؛ جرّب تحديث الصفحة.';return;}
+    if(!supabaseClient){this.backendAvailable=false;this.properties=[];this.dataMode='live';this.backendError='تعذر تحميل مكتبة الاتصال؛ حدّث الصفحة أو حاول لاحقًا.';return;}
     this.backendAvailable=true;
     try{
       const {data:{session},error}=await supabaseClient.auth.getSession();
@@ -1729,7 +1728,7 @@ methods:{
       });
       this.authSubscription=subscription;this.backendReady=true;this.backendError='';
       this.handleDashboardDeepLink();
-    }catch(error){console.error('Samsar backend initialization failed:',error);this.backendError='تعذر الاتصال بقاعدة البيانات حاليًا؛ البيانات الظاهرة قد تكون تجريبية.';}
+    }catch(error){console.error('Samsar backend initialization failed:',error);this.properties=[];this.dataMode='live';this.backendError='تعذر الاتصال بقاعدة البيانات حاليًا. لم نعرض إعلانات تجريبية بدلًا من البيانات الحقيقية.';}
   },
   handleDashboardDeepLink(){
     const params=new URLSearchParams(window.location.search);
