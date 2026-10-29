@@ -1953,8 +1953,22 @@ methods:{
   closeLogin(){if(['admin','employees','settings','staff'].includes(this.adminRouteMode))return;this.loginOpen=false;},
   openEntryChooser(){this.entryChooserOpen=true;},
   async chooseEntryRole(role){
-    try{await this.beginSignup(role);}
-    catch(error){console.error('Samsar entry choice failed:',error);this.toast('تعذر فتح التسجيل الآن. حدّث الصفحة وحاول مرة أخرى.');}
+    const requested=role==='owner'?'owner':'customer';
+    try{
+      if(!this.sessionUser?.isSupabaseUser){
+        this.entryChooserOpen=false;
+        this.signupRequestedRole=requested;
+        this.signupName='';
+        this.signupPhone='';
+        this.signupAddress='';
+        this.loginForm={email:'',password:''};
+        this.authMode='signup';
+        this.loginError='';
+        this.loginOpen=true;
+        return;
+      }
+      await this.beginSignup(requested);
+    }catch(error){console.error('Samsar entry choice failed:',error);this.toast('تعذر فتح التسجيل الآن. حدّث الصفحة وحاول مرة أخرى.');}
   },
   startListingEntry(){
     if(this.sessionUser && (this.sessionUser.role==='owner'||this.sessionUser.requestedRole==='owner')){this.newListing();return;}
