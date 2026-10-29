@@ -1611,7 +1611,7 @@ methods:{
     if(direct)return direct;
     let path=String(photo.storagePath||photo.storage_path||'').trim();
     if(!path||!supabaseClient)return '';
-    path=path.replace(/^\\/+/, '').replace(/^property-images\\//i, '');
+    path=path.replace(/^\/+/, '').replace(/^property-images\//i, '');
     try{return supabaseClient.storage.from('property-images').getPublicUrl(path).data.publicUrl||'';}
     catch(error){console.warn('تعذر تجهيز رابط صورة العقار:',error);return '';}
   },
