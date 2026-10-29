@@ -1010,8 +1010,8 @@ img{max-width:100%}
         <label v-if="authMode === 'signup'">الاسم بالكامل<input v-model.trim="signupName" required maxlength="100" autocomplete="name" /></label>
         <label v-if="authMode === 'signup'">رقم الهاتف *<input v-model.trim="signupPhone" type="tel" required maxlength="25" autocomplete="tel" /></label>
         <label v-if="authMode === 'signup'">العنوان *<input v-model.trim="signupAddress" required maxlength="250" autocomplete="street-address" placeholder="المحافظة، المدينة، المنطقة" /></label>
-        <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required autocomplete="username" /></label>
-        <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="authMode === 'signup' ? 'new-password' : 'current-password'" /></label>
+        <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required :autocomplete="adminRouteMode === 'staff' ? 'off' : 'username'" :name="adminRouteMode === 'staff' ? 'staff-login-email' : 'email'" /></label>
+        <label>كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" :autocomplete="['admin','employees','settings','staff'].includes(adminRouteMode) ? 'new-password' : (authMode === 'signup' ? 'new-password' : 'current-password')" :name="adminRouteMode === 'staff' ? 'staff-login-password' : 'password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
         <button type="submit" class="primary-button full-width">{{ authMode === 'signup' ? 'إنشاء حساب' : 'دخول للحساب' }}</button>
         <button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
@@ -1604,6 +1604,7 @@ methods:{
     const route=params.has('admin')?'admin':(params.has('employees')?'employees':(params.has('staff')?'staff':(params.has('settings')?'settings':(params.has('owner')?'owner':(params.has('customer')?'customer':(params.has('dashboard')?'dashboard':''))))));
     if(!route)return;
     this.adminRouteMode=route;
+    if(route==='staff')this.loginForm={email:'',password:''};
     if(!this.sessionUser){this.openLogin();return;}
     if(route==='admin'&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذا الرابط مخصص لمدير النظام فقط. سجّل الدخول بحساب الأدمن المعتمد.';this.toast('هذه مساحة خاصة بالأدمن.');return;}
     if((route==='settings'||route==='employees')&&this.sessionUser.role!=='admin'){this.adminOpen=false;this.loginOpen=true;this.loginError='هذه الصفحة مخصصة لمدير النظام فقط.';this.toast('لا تملك صلاحية الدخول لهذه الصفحة.');return;}
@@ -1868,7 +1869,7 @@ methods:{
     }
     this.signupRequestedRole=requested;this.signupName='';this.signupPhone='';this.signupAddress='';this.authMode='signup';this.loginError='';this.loginOpen=true;
   },
-  openLogin(){this.loginError='';this.authMode='signin';this.loginOpen=true;},
+  openLogin(){if(this.adminRouteMode==='staff')this.loginForm={email:'',password:''};this.loginError='';this.authMode='signin';this.loginOpen=true;},
   async login(){
     if(['admin','employees','settings','staff'].includes(this.adminRouteMode)&&this.authMode==='signup'){this.authMode='signin';this.loginError='إنشاء الحسابات من هذه البوابة غير مسموح. اطلب من الأدمن إنشاء حسابك.';return;}
     if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
