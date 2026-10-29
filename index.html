@@ -752,7 +752,7 @@ img{max-width:100%}
       <div v-if="filteredProperties.length" class="property-grid">
         <article v-for="property in filteredProperties" :key="property.id" class="property-card">
           <div class="property-photo" @click="openProperty(property)">
-            <img :src="property.photos[0] || fallbackImage" :alt="property.title" @error="onImageError" />
+            <img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" :alt="property.title" @error="onImageError" />
             <span class="property-badge" :class="property.transaction === 'بيع' ? 'sale-badge' : 'rent-badge'">{{ property.transaction }}</span>
             <span v-if="property.featured && !property.isDemo" class="featured-badge">مميز</span>
             <span v-if="property.isDemo" class="demo-property-badge">عرض تجريبي</span>
