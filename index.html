@@ -105,6 +105,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .property-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px #193d2b14}
 .property-photo{position:relative;height:185px;overflow:hidden;cursor:pointer;background:#e2ece4}
 .property-photo>img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.property-image-empty{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#eef3ef,#e1e9e2);color:#536b5c;font-size:30px}.property-image-empty span{font-size:12px;font-weight:700}
 .property-card:hover .property-photo>img{transform:scale(1.035)}
 .property-badge,.featured-badge,.photo-count{position:absolute;z-index:2;padding:5px 8px;border-radius:6px;font-size:9px;font-weight:900}
 .property-badge{top:10px;right:10px;color:#14665b;background:#e7f8ed}
@@ -752,7 +753,7 @@ img{max-width:100%}
       <div v-if="filteredProperties.length" class="property-grid">
         <article v-for="property in filteredProperties" :key="property.id" class="property-card">
           <div class="property-photo" @click="openProperty(property)">
-            <img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" :alt="property.title" @error="onImageError" />
+            <img v-if="property.photos[0]?.src || property.photos[0]" :src="property.photos[0]?.src || property.photos[0]" :alt="property.title" @error="onPropertyImageError" /><div v-else class="property-image-empty">📷<span>لا توجد صورة حقيقية مرفوعة</span></div>
             <span class="property-badge" :class="property.transaction === 'بيع' ? 'sale-badge' : 'rent-badge'">{{ property.transaction }}</span>
             <span v-if="property.featured && !property.isDemo" class="featured-badge">مميز</span>
             <span v-if="property.isDemo" class="demo-property-badge">عرض تجريبي</span>
@@ -901,7 +902,7 @@ img{max-width:100%}
       <h3 class="subheading">إعلاناتي</h3>
       <div v-if="ownerProperties.length" class="owner-list-grid">
         <article v-for="property in ownerProperties" :key="property.id" class="owner-card">
-          <img :src="property.photos[0] || fallbackImage" :alt="property.title" @error="onImageError" />
+          <img :src="property.photos[0] || fallbackImage" :alt="property.title" @error="onPropertyImageError" /><div v-else class="property-image-empty">📷<span>لا توجد صورة حقيقية مرفوعة</span></div>
           <div class="owner-card-content">
             <span class="status-pill">{{ property.status }}</span>
             <h4>{{ property.title }}</h4>
@@ -1117,7 +1118,7 @@ img{max-width:100%}
               </form>
             </div>
             <article v-for="property in filteredAdminProperties" :key="property.id" class="admin-list-item">
-              <img :src="property.photos[0]?.src || property.photos[0] || fallbackImage" @error="onImageError" />
+              <img v-if="property.photos[0]?.src || property.photos[0]" :src="property.photos[0]?.src || property.photos[0]" @error="onImageError" />
               <div class="admin-list-main"><strong>{{ property.title }}</strong><small>{{ property.area }} — {{ property.neighborhood }}</small><small>رقم العقار: {{ propertyCode(property) }}</small><small>{{ money(property.price) }} · {{ property.transaction }} · {{ property.isDemo?'تجريبي':'رسمي' }}</small></div>
               <select :value="property.isBackendRecord ? property.backendStatus : property.status" @change="changeListingStatus(property.id,$event.target.value)"><option value="draft" :disabled="sessionUser?.role!=='admin'">مسودة</option><option value="pending_review">قيد المراجعة</option><option value="published" :disabled="sessionUser?.role!=='admin'">منشور</option><option value="rejected" :disabled="sessionUser?.role!=='admin'">مرفوض</option><option value="rented">مباع / مؤجر</option><option value="archived">مؤرشف / متوقف</option></select>
               <button class="outline-light-button" @click="openProperty(property)">عرض</button><button v-if="sessionUser?.role==='admin'" class="outline-light-button" @click="editListing(property)">تعديل</button><button v-if="sessionUser?.role==='admin'" class="danger-button" @click="deleteListing(property)">حذف</button>
@@ -1576,6 +1577,18 @@ methods:{
     if(event.target&&!event.target.dataset.fallbackApplied){
       event.target.dataset.fallbackApplied='true';
       event.target.src=this.fallbackImage;
+    }
+  },
+  onPropertyImageError(event){
+    const image=event.target;
+    if(!image)return;
+    image.style.display='none';
+    const parent=image.parentElement;
+    if(parent&&!parent.querySelector('.property-image-empty')){
+      const placeholder=document.createElement('div');
+      placeholder.className='property-image-empty';
+      placeholder.innerHTML='<span aria-hidden="true">📷</span><span>تعذر تحميل صورة العقار</span>';
+      parent.appendChild(placeholder);
     }
   },
   loadDemoData(){
