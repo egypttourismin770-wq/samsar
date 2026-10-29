@@ -1051,7 +1051,7 @@ img{max-width:100%}
         <label>البريد الإلكتروني<input v-model.trim="loginForm.email" type="email" required :autocomplete="adminRouteMode === 'staff' ? 'off' : 'username'" :name="adminRouteMode === 'staff' ? 'staff-login-email' : 'email'" /></label>
         <label v-if="['admin','employees','settings','staff'].includes(adminRouteMode)">كلمة المرور<input v-model="loginForm.password" type="password" required minlength="8" autocomplete="current-password" :name="adminRouteMode === 'staff' ? 'staff-login-password' : 'admin-login-password'" /></label>
         <p v-if="loginError" class="error-message">{{ loginError }}</p>
-        <button type="submit" class="primary-button full-width">{{ ['admin','employees','settings','staff'].includes(adminRouteMode) ? 'دخول للحساب' : (authMode === 'signup' ? 'إنشاء الحساب وإرسال رابط الدخول' : 'إرسال رابط الدخول إلى البريد') }}</button>
+        <button type="submit" class="primary-button full-width" :disabled="authBusy">{{ authBusy ? 'جاري الاتصال...' : (['admin','employees','settings','staff'].includes(adminRouteMode) ? 'دخول للحساب' : (authMode === 'signup' ? 'إنشاء الحساب وإرسال رابط الدخول' : 'إرسال رابط الدخول إلى البريد')) }}</button>
         <button v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" type="button" class="outline-light-button full-width" @click="authMode = authMode === 'signin' ? 'signup' : 'signin'; loginError = ''">{{ authMode === 'signup' ? 'عندي حساب بالفعل' : 'إنشاء حساب جديد' }}</button>
       </form>
       <p v-if="!['admin','employees','settings','staff'].includes(adminRouteMode)" class="hint">{{ signupRequestedRole==='owner' ? 'سيتم تسجيل طلب صاحب العقار، وتظل صلاحية نشر الإعلانات خاضعة لاعتماد الإدارة.' : 'حساب العميل يتيح متابعة طلباته. لا يمكن منح صلاحيات المالك أو الإدارة من التسجيل العام.' }} رابط الدخول صالح عبر البريد الإلكتروني؛ لا تشارك الرابط مع أي شخص.</p>
@@ -1356,6 +1356,7 @@ data() {
     signupPhone:'',
     loginForm:{email:'',password:''},
     loginError:'',
+    authBusy:false,
     backendAvailable:!!supabaseClient,
     backendReady:false,
     backendError:'',
@@ -2051,6 +2052,8 @@ methods:{
      if(restricted&&this.authMode==='signup'){this.authMode='signin';this.loginError='إنشاء الحسابات من هذه البوابة غير مسموح. اطلب من الأدمن إنشاء حسابك.';return;}
      if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
      const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password;this.loginError='';
+     if(this.authBusy)return;
+     this.authBusy=true;this.toast('جاري الاتصال بخدمة التسجيل...');
      try{
        if(!restricted){
          if(!email){this.loginError='اكتب البريد الإلكتروني.';return;}
@@ -2070,7 +2073,8 @@ methods:{
        if(this.pendingPropertyId&&this.sessionUser?.role==='customer'){const property=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(property)this.openViewingModal(property);}
        else if(this.pendingPropertyId){this.pendingPropertyId='';this.toast('طلب المعاينة متاح لحساب العميل.');}
        this.loginForm={email:'',password:''};
-     }catch(error){console.error('Samsar authentication failed:',error);this.loginError=error?.message||'تعذر إكمال العملية. راجع البيانات وحاول مرة أخرى.';}
+     }catch(error){console.error('Samsar authentication failed:',error);this.loginError=error?.message||'تعذر إكمال العملية. راجع البيانات وحاول مرة أخرى.';this.toast('فشل التسجيل: '+this.loginError);}
+     finally{this.authBusy=false;}
    },
    async logout(){
     const wasBackendUser=!!this.sessionUser?.isSupabaseUser;
