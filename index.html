@@ -1062,13 +1062,13 @@ img{max-width:100%}
   <div v-if="viewingOpen" class="overlay" @click.self="viewingOpen=false">
     <section class="modal viewing-modal">
       <div class="modal-heading"><div><span class="eyebrow">خطوة قبل زيارة العقار</span><h2>طلب معاينة</h2></div><button type="button" class="close-button" @click="viewingOpen=false">✕</button></div>
-      <div v-if="viewingProperty" class="viewing-summary"><img :src="viewingProperty.photos[0]?.src || viewingProperty.photos[0]" @error="onImageError" /><div><strong>{{ viewingProperty.title }}</strong><small>رقم العقار: {{ propertyCode(viewingProperty) }}</small><small>{{ viewingProperty.area }} — {{ viewingProperty.neighborhood }}</small><b>{{ money(viewingProperty.price) }}</b></div></div>
+      <div v-if="viewingProperty" class="viewing-summary"><img :src="propertyCoverImage(viewingProperty)" @error="onPropertyImageError" /><div><strong>{{ viewingProperty.title }}</strong><small>رقم العقار: {{ propertyCode(viewingProperty) }}</small><small>{{ viewingProperty.area }} — {{ viewingProperty.neighborhood }}</small><b>{{ money(viewingProperty.price) }}</b></div></div>
       <form @submit.prevent="submitViewing" class="login-form">
         <label>الاسم بالكامل *<input v-model.trim="viewingForm.customerName" required maxlength="100" /></label>
         <label>رقم الهاتف *<input v-model.trim="viewingForm.phone" type="tel" required maxlength="25" /></label>
         <div class="form-grid"><label>التاريخ المفضل *<input v-model="viewingForm.date" type="date" :min="today" required /></label><label>الوقت المفضل *<select v-model="viewingForm.time"><option>10:00</option><option>12:00</option><option>14:00</option><option>16:00</option><option>18:00</option></select></label></div>
         <label>ملاحظات<textarea v-model.trim="viewingForm.note" maxlength="500" rows="3"></textarea></label>
-        <div class="policy-note">هذا طلب معاينة تجريبي فقط. لا يوجد حجز فعلي أو تحصيل رسوم أو استرداد مالي في هذه النسخة.</div>
+        <div class="policy-note">هذا طلب لتنسيق موعد المعاينة، وليس تأكيدًا نهائيًا. سيتم إرسال الطلب إلى النظام لمراجعته والتواصل معك بشأن الموعد.</div>
         <button class="primary-button full-width" type="submit">إرسال طلب حجز المعاينة</button>
       </form>
     </section>
@@ -1458,6 +1458,7 @@ computed:{
   filteredProperties(){
     const term=(this.filters.query||'').toLocaleLowerCase('ar');
     return this.properties.filter(p=>{
+      if(p.isDemo&&!['admin','staff'].includes(this.sessionUser?.role))return false;
       const text=[p.title,p.area,p.neighborhood,p.type,p.transaction,p.description,p.id,this.propertyCode(p)].join(' ').toLocaleLowerCase('ar');
       const matches=!term||text.includes(term);
       const transaction=this.filters.transaction==='الكل'||p.transaction===this.filters.transaction;
@@ -2134,7 +2135,7 @@ methods:{
     }catch(error){console.error(error);this.toast('تعذر إرسال الرد. تأكد أن الطلب ما زال في انتظار المالك.');}
   },
   requestViewing(property){
-    if(property?.isDemo){this.openViewingModal(property);return;}
+    if(property?.isDemo){this.toast('هذا إعلان تجريبي للإدارة فقط، ولا يمكن طلب معاينة له. اختر عقارًا حقيقيًا منشورًا.');return;}
     if(!property?.isBackendRecord){this.toast('هذا العقار معروض كبيانات تجريبية؛ طلب المعاينة الحقيقي يتطلب إعلانًا منشورًا في قاعدة البيانات.');return;}
     if(!this.sessionUser){this.pendingPropertyId=property.id;this.selectedProperty=null;this.signupRequestedRole='customer';this.signupName='';this.signupPhone='';this.signupAddress='';this.authMode='signup';this.loginError='';this.loginOpen=true;this.toast('سجّل بيانات العميل أولًا لإكمال طلب المعاينة.');return;}
     if(this.sessionUser.role!=='customer'){this.toast('طلب المعاينة متاح لحساب العميل.');return;}
