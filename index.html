@@ -1458,7 +1458,7 @@ computed:{
   filteredProperties(){
     const term=(this.filters.query||'').toLocaleLowerCase('ar');
     return this.properties.filter(p=>{
-      if(p.isDemo&&!['admin','staff'].includes(this.sessionUser?.role))return false;
+      if(p.isDemo)return false;
       const text=[p.title,p.area,p.neighborhood,p.type,p.transaction,p.description,p.id,this.propertyCode(p)].join(' ').toLocaleLowerCase('ar');
       const matches=!term||text.includes(term);
       const transaction=this.filters.transaction==='الكل'||p.transaction===this.filters.transaction;
