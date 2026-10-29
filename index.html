@@ -1380,6 +1380,7 @@ data() {
 },
 
 mounted(){
+  try{const pendingOrderLookup=sessionStorage.getItem('samsar_pending_customer_order_lookup');if(pendingOrderLookup){this.customerOrderLookup=pendingOrderLookup;this.customerOrderLookupPending=true;}}catch(error){console.warn('Could not restore pending order lookup:',error);}
   this.$nextTick(()=>{
     this.applyLanguage();
     this.languageObserver=new MutationObserver(()=>{if(this.currentLanguage==='en')this.applyLanguage();});
@@ -1951,8 +1952,8 @@ methods:{
   async trackCustomerOrder(){
     const term=String(this.customerOrderLookup||'').trim();
     if(!term){this.customerOrderLookupMessage='اكتب رقم الطلب أولًا.';return;}
-    if(!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='customer'){this.customerOrderLookupPending=true;this.customerOrderLookupMessage='لخصوصية طلباتك، سجّل الدخول بحساب العميل مرة واحدة؛ هنكمل البحث تلقائيًا بعد الدخول.';this.openLogin();return;}
-    try{await this.loadBackendViewings();const matches=this.customerViewings.filter(v=>String(v.id||'').toLowerCase().startsWith(term.toLowerCase())||String(v.id||'').slice(0,8).toLowerCase()===term.toLowerCase());this.customerOrderLookupMessage=matches.length?`تم العثور على ${matches.length} طلب مرتبط بحسابك.`:'مش لاقيين طلب بالرقم ده في حسابك. راجع أول 8 خانات من رقم الطلب.';this.$nextTick(()=>this.scrollTo('my-viewings'));}
+    if(!this.sessionUser?.isSupabaseUser||this.sessionUser.role!=='customer'){this.customerOrderLookupPending=true;try{sessionStorage.setItem('samsar_pending_customer_order_lookup',term);}catch(error){console.warn('Could not save pending order lookup:',error);}this.customerOrderLookupMessage='لخصوصية طلباتك، سجّل الدخول بحساب العميل مرة واحدة؛ هنكمل البحث تلقائيًا بعد الدخول.';this.openLogin();return;}
+    try{this.customerOrderLookupPending=false;try{sessionStorage.removeItem('samsar_pending_customer_order_lookup');}catch(error){}await this.loadBackendViewings();const matches=this.customerViewings.filter(v=>String(v.id||'').toLowerCase().startsWith(term.toLowerCase())||String(v.id||'').slice(0,8).toLowerCase()===term.toLowerCase());this.customerOrderLookupMessage=matches.length?`تم العثور على ${matches.length} طلب مرتبط بحسابك.`:'مش لاقيين طلب بالرقم ده في حسابك. راجع أول 8 خانات من رقم الطلب.';this.$nextTick(()=>this.scrollTo('my-viewings'));}
     catch(error){console.error('Customer order tracking failed:',error);this.customerOrderLookupMessage='تعذر تحميل طلباتك الآن. جرّب مرة أخرى.';}
   },
   async login(){
