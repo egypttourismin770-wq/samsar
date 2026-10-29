@@ -1643,6 +1643,7 @@ methods:{
         setTimeout(async()=>{
           try{
             await this.syncAuthSession(session);
+            if(session&&!['admin','employees','settings','staff'].includes(this.adminRouteMode)){this.loginOpen=false;if(this.sessionUser?.requestedRole==='owner')this.$nextTick(()=>this.scrollTo('owner-workspace'));else if(this.sessionUser?.role==='customer'&&this.pendingPropertyId){const pending=this.getProperty(this.pendingPropertyId);this.pendingPropertyId='';if(pending)this.openViewingModal(pending);}}
             await this.loadBackendProperties();
             await this.loadPublicSettings();
             await this.loadBackendViewings();
@@ -1686,7 +1687,7 @@ methods:{
     if(!session?.user){if(this.sessionUser?.isSupabaseUser)this.sessionUser=null;return;}
     const user=session.user;let profile=null;const metadata=user.user_metadata||{};
     try{const {data,error}=await supabaseClient.from('profiles').select('full_name,phone,whatsapp_phone,address_text,requested_role,role,staff_permissions').eq('id',user.id).maybeSingle();if(error)throw error;profile=data;
-      const patch={};if(metadata.address_text&&!profile?.address_text)patch.address_text=metadata.address_text;if(metadata.requested_role==='owner'&&profile?.requested_role!=='owner')patch.requested_role='owner';
+      const patch={};if(metadata.full_name&&(!profile?.full_name||profile.full_name===user.email))patch.full_name=metadata.full_name;if(metadata.phone&&!profile?.phone)patch.phone=metadata.phone;if(metadata.address_text&&!profile?.address_text)patch.address_text=metadata.address_text;if(metadata.requested_role==='owner'&&profile?.requested_role!=='owner')patch.requested_role='owner';
       if(Object.keys(patch).length&&profile){const {error:updateError}=await supabaseClient.from('profiles').update(patch).eq('id',user.id);if(updateError)console.warn('Profile contact details could not be synced:',updateError);else profile={...profile,...patch};}
     }catch(error){console.error('Could not load Samsar profile:',error);}
     this.sessionUser={id:user.id,email:user.email||'',name:profile?.full_name||metadata.full_name||user.email||'مستخدم سمسار',phone:profile?.phone||user.phone||'',address:profile?.address_text||metadata.address_text||'',role:profile?.role||'customer',requestedRole:profile?.requested_role||metadata.requested_role||'',staffPermissions:profile?.staff_permissions||{},isSupabaseUser:true};
