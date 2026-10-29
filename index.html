@@ -2052,7 +2052,7 @@ methods:{
      const restricted=['admin','employees','settings','staff'].includes(this.adminRouteMode);
      if(restricted&&this.authMode==='signup'){this.authMode='signin';this.loginError='إنشاء الحسابات من هذه البوابة غير مسموح. اطلب من الأدمن إنشاء حسابك.';return;}
      if(!supabaseClient){this.loginError='الاتصال بقاعدة البيانات غير متاح الآن.';return;}
-     const email=this.loginForm.email.trim().toLowerCase(),password=this.loginForm.password,phone=this.signupPhone.trim().replace(/[\\s()-]/g,'');this.loginError='';
+     const password=this.loginForm.password,phone=this.signupPhone.trim().replace(/[\\s()-]/g,'');const email=restricted?this.loginForm.email.trim().toLowerCase():'';this.loginError='';
      if(this.authBusy)return;
      if(!restricted&&(!phone||phone.replace(/\\D/g,'').length<7)){this.loginError='اكتب رقم موبايل صحيحًا.';return;}
      if(!password||password.length<8){this.loginError='كلمة المرور يجب ألا تقل عن 8 أحرف.';return;}
