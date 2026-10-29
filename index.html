@@ -1124,6 +1124,27 @@ img{max-width:100%}
             </div>
           </div>
 
+
+          <div v-if="adminTab === 'listing-review' && sessionUser?.role==='staff' && sessionUser?.staffPermissions?.listings_review" class="admin-content">
+            <div class="row-between admin-listing-heading"><div><span class="eyebrow">صلاحية مستقلة للموظف</span><h3>مراجعة ونشر الإعلانات</h3><p class="muted">راجع تفاصيل العقار قبل النشر. زر النشر متاح للموظف صاحب صلاحية مراجعة الإعلانات فقط.</p></div><button class="outline-light-button" @click="loadBackendProperties">تحديث القائمة</button></div>
+            <article v-for="property in properties.filter(p=>p.isBackendRecord && !p.isDemo && p.backendStatus==='pending_review')" :key="property.id" class="admin-list-item">
+              <img v-if="property.photos[0]?.src || property.photos[0]" :src="property.photos[0]?.src || property.photos[0]" :alt="property.title" @error="onPropertyImageError" />
+              <div v-else class="property-image-empty">📷<span>لا توجد صورة مرفوعة</span></div>
+              <div class="admin-list-main">
+                <strong>{{ property.title }}</strong>
+                <small>{{ property.area }} — {{ property.neighborhood }}</small>
+                <small>رقم العقار: {{ propertyCode(property) }}</small>
+                <small>{{ property.type }} · {{ property.transaction }} · {{ property.size }} م² · {{ money(property.price) }}</small>
+                <small>رسوم الإعلان: {{ ['paid','waived'].includes(property.ownerFeeStatus) ? (property.ownerFeeStatus==='paid'?'تم اعتماد الدفع':'معفى من الرسوم') : 'لم يتم اعتماد الدفع بعد' }}</small>
+                <small>{{ property.description }}</small>
+              </div>
+              <button class="outline-light-button" @click="openProperty(property)">مراجعة التفاصيل</button>
+              <button class="primary-button" :disabled="!['paid','waived'].includes(property.ownerFeeStatus) || listingPublishBusyId===property.id" @click="publishListingByStaff(property)">{{ listingPublishBusyId===property.id ? 'جارٍ النشر…' : 'نشر الإعلان' }}</button>
+            </article>
+            <p v-if="!properties.some(p=>p.isBackendRecord && !p.isDemo && p.backendStatus==='pending_review')" class="empty-state">لا توجد إعلانات بانتظار مراجعة النشر حاليًا.</p>
+            <p class="policy-note">النشر متاح للموظف الذي يحمل صلاحية «مراجعة الإعلانات» فقط. لا يمكن نشر إعلان تجريبي أو إعلان لم تُعتمد رسومه.</p>
+          </div>
+
           <div v-if="adminTab === 'listings'" class="admin-content">
             <div class="row-between admin-listing-heading"><div><h3>إدارة كل الإعلانات</h3><p class="muted">الإعلانات الرسمية والتجريبية؛ تعديل الاسم والسعر والتفاصيل والصور من نفس الصفحة.</p></div><button v-if="sessionUser?.role==='admin'" class="primary-button" @click="newListing">＋ إضافة إعلان</button></div>
             <div class="admin-list-filters"><input v-model.trim="adminListingSearch" placeholder="ابحث بالاسم أو المنطقة أو رقم الإعلان" /><select v-model="adminListingFilter"><option value="all">كل الإعلانات</option><option value="demo">تجريبية</option><option value="real">رسمية</option><option value="published">منشورة</option><option value="sold">مباع / مؤجر</option></select></div>
@@ -1375,6 +1396,7 @@ data() {
     listingFormOpen:false,
     editingListingId:'',
     listingForm:this.emptyListingForm(),
+    listingPublishBusyId:'',
     alternateFormId:'',
     alternateDate:'',
     alternateTime:'16:00',
@@ -1384,6 +1406,7 @@ data() {
     toastTimer:null,
     adminTabs:[
       {id:'overview',label:'نظرة عامة',icon:'▦',roles:['admin','staff']},
+      {id:'listing-review',label:'مراجعة ونشر الإعلانات',icon:'✓',roles:['staff']}
       {id:'listings',label:'العقارات',icon:'⌂',roles:['admin','staff']},
       {id:'viewings',label:'طلبات المعاينة',icon:'▤',roles:['admin','staff']},
       {id:'inquiries',label:'استفسارات العملاء',icon:'✉',roles:['admin','staff']},
@@ -1481,7 +1504,7 @@ computed:{
       if(role==='admin'&&this.adminRouteMode==='settings')return t.id==='settings';
       if(role==='admin'&&this.adminRouteMode==='employees')return t.id==='staff';
       if(role!=='staff')return true;
-      const required={listings:'listings_review',viewings:'viewings',inquiries:'inquiries',assistant:'ai_assistant'}[t.id];
+      const required={'listing-review':'listings_review',listings:'listings_review',viewings:'viewings',inquiries:'inquiries',assistant:'ai_assistant'}[t.id];
       return !required || this.sessionUser?.staffPermissions?.[required]===true;
     });
   },
@@ -2253,6 +2276,22 @@ methods:{
     if(!confirm(isAdmin?'حذف الإعلان نهائيًا من قاعدة البيانات؟ هذا الإجراء لا يمكن التراجع عنه.':'حذف الإعلان؟'))return;
     if(property.isBackendRecord){try{const {error}=await supabaseClient.from('properties').delete().eq('id',property.id);if(error)throw error;await this.loadBackendProperties();this.toast(isAdmin?'تم حذف الإعلان من قاعدة البيانات.':'تم حذف المسودة.');}catch(error){console.error(error);this.toast(isAdmin?'تعذر حذف الإعلان؛ تحقق من الصلاحيات والعلاقات المرتبطة.':'يمكن حذف المسودات فقط؛ الإعلان المنشور يحتاج إيقافه أو أرشفته من الإدارة.');}return;}
     this.properties=this.properties.filter(p=>p.id!==property.id);this.persistDemo();this.toast('تم حذف الإعلان التجريبي محليًا.');
+  },
+  async publishListingByStaff(property){
+    if(this.sessionUser?.role!=='staff'||this.sessionUser?.staffPermissions?.listings_review!==true){this.toast('تحتاج صلاحية «مراجعة الإعلانات» لنشر العقار.');return;}
+    if(!property?.isBackendRecord||property.isDemo||property.backendStatus!=='pending_review'){this.toast('هذا الإعلان ليس ضمن قائمة المراجعة الرسمية.');return;}
+    if(!['paid','waived'].includes(property.ownerFeeStatus)){this.toast('لا يمكن نشر الإعلان قبل اعتماد رسومه من الإدارة.');return;}
+    if(this.listingPublishBusyId)return;
+    this.listingPublishBusyId=property.id;
+    try{
+      const {error}=await supabaseClient.rpc('publish_listing_by_staff',{p_property_id:property.id});
+      if(error)throw error;
+      await this.loadBackendProperties();
+      this.toast('تم نشر الإعلان للعامة بنجاح.');
+    }catch(error){
+      console.error('Samsar staff listing publication failed:',error);
+      this.toast(error?.message||'تعذر نشر الإعلان. تأكد من صلاحية مراجعة الإعلانات واعتماد الرسوم.');
+    }finally{this.listingPublishBusyId='';}
   },
   async changeListingStatus(id,status){
     const isAdmin=this.sessionUser?.role==='admin',isStaff=this.sessionUser?.role==='staff';
