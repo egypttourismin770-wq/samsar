@@ -1011,9 +1011,9 @@ img{max-width:100%}
     <section class="modal login-modal entry-chooser">
       <div class="modal-heading"><div><span class="eyebrow">ابدأ مع سمسار</span><h2>إيه اللي محتاجه؟</h2></div><button class="close-button" @click="entryChooserOpen=false">✕</button></div>
       <div class="entry-choice-grid">
-        <button class="entry-choice owner-choice" @click="beginSignup('owner')"><span>⌂</span><strong>أنا صاحب عقار</strong><small>سجّل بياناتك ثم جهّز إعلانك وصوره</small></button>
-        <button class="entry-choice customer-choice" @click="beginSignup('customer')"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
-        <button class="entry-choice track-choice" @click="entryChooserOpen=false;trackingOpen=false;scrollTo('public-property-tracker')"><span>▤</span><strong>متابعة العقار والمعاينة</strong><small>اكتب رقم العقار في خانة واحدة، من غير كلمة مرور</small></button>
+        <button type="button" class="entry-choice owner-choice" @click.prevent.stop="chooseEntryRole('owner')"><span>⌂</span><strong>أنا صاحب عقار</strong><small>سجّل بياناتك ثم جهّز إعلانك وصوره</small></button>
+        <button type="button" class="entry-choice customer-choice" @click.prevent.stop="chooseEntryRole('customer')"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
+        <button type="button" class="entry-choice track-choice" @click.prevent.stop="choosePublicTracking()"><span>▤</span><strong>متابعة العقار والمعاينة</strong><small>اكتب رقم العقار في خانة واحدة، من غير كلمة مرور</small></button>
       </div>
       <p class="hint">تقدر تجهّز مسودة الإعلان بعد تسجيل حساب صاحب العقار. نشره للعامة يظل بعد اعتماد المالك ومراجعة إثبات الدفع، ولا يحصل أي حساب جديد على صلاحيات الإدارة.</p>
     </section>
@@ -1933,6 +1933,19 @@ methods:{
   },
   closeLogin(){if(['admin','employees','settings','staff'].includes(this.adminRouteMode))return;this.loginOpen=false;},
   openEntryChooser(){this.entryChooserOpen=true;},
+  async chooseEntryRole(role){
+    try{await this.beginSignup(role);}
+    catch(error){console.error('Samsar entry choice failed:',error);this.toast('تعذر فتح التسجيل الآن. حدّث الصفحة وحاول مرة أخرى.');}
+  },
+  choosePublicTracking(){
+    this.entryChooserOpen=false;
+    this.trackingOpen=false;
+    this.$nextTick(()=>{
+      const target=document.getElementById('public-property-tracker');
+      if(target){target.scrollIntoView({behavior:'smooth',block:'center'});const input=target.querySelector('input');if(input)input.focus({preventScroll:true});}
+      else this.toast('مش قادرين نفتح متابعة العقار دلوقتي. حدّث الصفحة وحاول تاني.');
+    });
+  },
   async beginSignup(role){
     const requested=role==='owner'?'owner':'customer';
     this.entryChooserOpen=false;
