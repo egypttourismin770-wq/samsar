@@ -595,6 +595,12 @@ img{max-width:100%}
 .staff-ai-panel{margin-top:14px;border-color:#d9c48d;background:linear-gradient(135deg,#fffdf6,#f5efdc)}.staff-ai-panel .staff-panel-heading h4{color:#174f47}.staff-ai-panel .assistant-input{padding:10px 0 0;border-top:1px solid #eadfbf}.staff-ai-panel .assistant-input button{background:linear-gradient(135deg,#c98c2f,#e6bb5b);color:#173d32}.staff-ai-panel .assistant-reply{margin-top:10px;padding:12px;border-radius:10px;background:#fff;color:#34594d;font-size:12px;line-height:1.8}
 @media(max-width:650px){.property-code-lookup{grid-template-columns:1fr}.property-code-form{width:100%}}
 
+ .language-toggle{border:1px solid #b8cdbd;background:#f1f8f2;color:#075c59;border-radius:10px;padding:8px 12px;font-weight:900;font-size:12px;min-width:48px}
+.public-tracking-result{grid-column:1/-1;margin-top:8px;padding:16px;border:1px solid #dce8d8;border-radius:14px;background:#fff;display:grid;gap:14px}
+.tracking-result-heading{display:flex;align-items:center;gap:14px}.tracking-result-heading img{width:112px;height:88px;object-fit:cover;border-radius:10px;background:#f1f3ec}.tracking-result-heading h3{margin:0 0 5px;font-size:17px}.tracking-result-heading p{margin:3px 0;font-size:12px;color:#65796e}
+.tracking-result-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.tracking-result-grid p{margin:0;padding:10px;border-radius:9px;background:#f5f8f1;display:flex;flex-direction:column;gap:4px}.tracking-result-grid span{font-size:11px;color:#708276}.tracking-result-grid strong{font-size:13px}.tracking-description{margin:0;line-height:1.8;font-size:13px}.tracking-viewing-status{display:grid;gap:6px;padding:12px;border-radius:10px;background:#fff6df;color:#644b1d;font-size:12px;line-height:1.8}
+.english-mode{font-family:Arial,sans-serif}.english-mode .topbar,.english-mode .property-code-lookup{text-align:left}
+@media(max-width:650px){.tracking-result-heading{align-items:flex-start}.tracking-result-heading img{width:84px;height:76px}.tracking-result-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -602,7 +608,7 @@ img{max-width:100%}
 <div id="app"></div>
 
 <script type="text/x-template" id="samsar-tpl">
-<div class="samsar" dir="rtl" :style="themeStyle">
+<div class="samsar" :dir="currentLanguage === 'ar' ? 'rtl' : 'ltr'" :class="{'english-mode':currentLanguage==='en'}" :style="themeStyle">
   <!-- الشريط العلوي -->
   <header class="topbar">
     <a href="#home" class="brand">
@@ -618,6 +624,7 @@ img{max-width:100%}
     </nav>
 
     <div class="top-actions">
+      <button v-if="!adminRouteMode" class="language-toggle" type="button" @click="toggleLanguage" :aria-label="currentLanguage==='ar' ? 'Switch to English' : 'التبديل إلى العربية'">{{ currentLanguage === 'ar' ? 'EN' : 'عربي' }}</button>
       <button class="icon-button" title="الملف الشخصي" @click="sessionUser ? toast('أهلًا ' + sessionUser.name) : openLogin()">♙</button>
       <button class="icon-button" title="المفضلة" @click="showFavorites = !showFavorites; scrollTo('properties')">
         ♡<sup v-if="favorites.length">{{ favorites.length }}</sup>
@@ -702,7 +709,7 @@ img{max-width:100%}
         </label>
         <button class="primary-button" @click="scrollTo('properties')">⌕ ابحث</button>
       </div>
-      <div class="property-code-lookup"><div><strong>معاك رقم عقار؟</strong><small>اكتب رقم العقار لعرض بياناته مباشرة.</small></div><form @submit.prevent="lookupPropertyByCode" class="property-code-form"><input v-model.trim="propertyCodeLookup" placeholder="مثال: 12 أو DEMO-01" aria-label="رقم العقار" /><button type="submit" class="primary-button">عرض العقار</button></form><p v-if="propertyLookupError" class="error-message">{{ propertyLookupError }}</p></div>
+      <div class="property-code-lookup" id="public-property-tracker"><div><strong>{{ currentLanguage==='ar' ? 'متابعة العقار والمعاينة' : 'Track a property and viewing' }}</strong><small>{{ currentLanguage==='ar' ? 'اكتب رقم العقار فقط لعرض التفاصيل وحالة الإعلان والمعاينة المتاحة.' : 'Enter a property number to view details and available viewing status.' }}</small></div><form @submit.prevent="lookupPropertyByCode" class="property-code-form"><input v-model.trim="propertyCodeLookup" :placeholder="currentLanguage==='ar' ? 'مثال: 1 أو 10 أو 20' : 'Example: 1, 10 or 20'" :aria-label="currentLanguage==='ar' ? 'رقم العقار' : 'Property number'" /><button type="submit" class="primary-button">{{ currentLanguage==='ar' ? 'متابعة العقار' : 'Track property' }}</button></form><p v-if="propertyLookupError" class="error-message">{{ propertyLookupError }}</p><article v-if="trackedProperty" class="public-tracking-result"><div class="tracking-result-heading"><img :src="trackedProperty.photos?.[0] || fallbackImage" :alt="trackedProperty.title" @error="onImageError" /><div><h3>{{ trackedProperty.title }}</h3><p>{{ currentLanguage==='ar' ? 'رقم العقار:' : 'Property number:' }} <strong>{{ propertyCode(trackedProperty) }}</strong></p><p>{{ trackedProperty.area }} — {{ trackedProperty.neighborhood }}</p><strong>{{ money(trackedProperty.price) }} {{ trackedProperty.transaction==='إيجار' ? (currentLanguage==='ar' ? 'شهريًا' : 'per month') : '' }}</strong></div></div><div class="tracking-result-grid"><p><span>{{ currentLanguage==='ar' ? 'حالة الإعلان' : 'Listing status' }}</span><strong>{{ trackingListingStatus(trackedProperty) }}</strong></p><p><span>{{ currentLanguage==='ar' ? 'المساحة' : 'Area' }}</span><strong>{{ trackedProperty.size }} {{ currentLanguage==='ar' ? 'م²' : 'm²' }}</strong></p><p><span>{{ currentLanguage==='ar' ? 'الغرف' : 'Bedrooms' }}</span><strong>{{ trackedProperty.bedrooms || 0 }}</strong></p><p><span>{{ currentLanguage==='ar' ? 'الحمامات' : 'Bathrooms' }}</span><strong>{{ trackedProperty.bathrooms || 0 }}</strong></p></div><p class="tracking-description">{{ trackedProperty.description }}</p><div class="tracking-viewing-status"><strong>{{ currentLanguage==='ar' ? 'حالة طلب المعاينة' : 'Viewing request status' }}</strong><span>{{ trackedViewingStatus || (currentLanguage==='ar' ? 'لا توجد حالة معاينة متاحة للعرض العام لهذا العقار. إذا قدمت طلبًا، سجّل الدخول إلى حساب العميل لعرض الحالة الشخصية.' : 'No public viewing status is available. Sign in to your customer account to see your personal request status.') }}</span></div></article></div>
     </section>
 
     <!-- المميزات -->
@@ -996,7 +1003,7 @@ img{max-width:100%}
       <div class="entry-choice-grid">
         <button class="entry-choice owner-choice" @click="beginSignup('owner')"><span>⌂</span><strong>أنا صاحب عقار</strong><small>سجّل بياناتك ثم جهّز إعلانك وصوره</small></button>
         <button class="entry-choice customer-choice" @click="beginSignup('customer')"><span>⌕</span><strong>أنا عميل</strong><small>أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة</small></button>
-        <button class="entry-choice track-choice" @click="entryChooserOpen=false;openLogin();trackingOpen=true"><span>▤</span><strong>متابعة رقم الطلب</strong><small>اعرض طلباتك وتفاصيل العقار بعد تسجيل الدخول</small></button>
+        <button class="entry-choice track-choice" @click="entryChooserOpen=false;trackingOpen=false;scrollTo('public-property-tracker')"><span>▤</span><strong>متابعة العقار والمعاينة</strong><small>اكتب رقم العقار في خانة واحدة، من غير كلمة مرور</small></button>
       </div>
       <p class="hint">حساب صاحب العقار يبدأ بطلب اعتماد، ولا يحصل أي حساب جديد على صلاحيات الإدارة.</p>
     </section>
@@ -1320,6 +1327,10 @@ data() {
     adminTab:'overview',
     propertyCodeLookup:'',
     propertyLookupError:'',
+    trackedProperty:null,
+    trackedViewingStatus:'',
+    currentLanguage:'ar',
+    languageObserver:null,
     entryChooserOpen:false,
     trackingOpen:false,
     customerOrderLookup:'',
@@ -1355,6 +1366,14 @@ data() {
   };
 },
 
+mounted(){
+  this.$nextTick(()=>{
+    this.applyLanguage();
+    this.languageObserver=new MutationObserver(()=>{if(this.currentLanguage==='en')this.applyLanguage();});
+    this.languageObserver.observe(this.$el,{childList:true,subtree:true,characterData:true});
+  });
+},
+beforeUnmount(){if(this.languageObserver)this.languageObserver.disconnect();},
 computed:{
   currentYear(){return new Date().getFullYear();},
   today(){
@@ -1507,8 +1526,28 @@ methods:{
     return {title:'',transaction:'إيجار',type:'شقة',price:'',suggestedPrice:'',area:'',neighborhood:'',addressText:'',size:'',bedrooms:2,bathrooms:1,description:'',amenitiesText:'',contractDetails:'',mapUrl:'',previewImages:[],identityDocName:'',ownershipDocName:'',isDemo:false};
   },
   emptyViewingForm(){return {customerName:'',phone:'',date:'',time:'16:00',note:''};},
+  toggleLanguage(){
+    this.currentLanguage=this.currentLanguage==='ar'?'en':'ar';
+    document.documentElement.lang=this.currentLanguage;document.documentElement.dir=this.currentLanguage==='ar'?'rtl':'ltr';
+    this.$nextTick(()=>this.applyLanguage());
+  },
+  applyLanguage(){
+    const translations={
+      'الرئيسية':'Home','العقارات':'Properties','خدماتنا':'Services','عن سمسار':'About Samsar','عقارك أقرب وأسهل':'Your next home, made easier','الملف الشخصي':'Profile','المفضلة':'Favorites','الإشعارات':'Notifications','＋ إنشاء إعلان':'+ Create listing','ابدأ البحث ←':'Start searching →','🤖 اسأل المساعد الذكي':'🤖 Ask the AI assistant','✦ منصة عقارية ذكية':'✦ Smart real-estate platform','اكتشف منزلك القادم':'Discover your next home','مع سمسار':'with Samsar',
+      'استكشف عقارات البيع والإيجار، قارن الأسعار والمساحات، ونظّم طلب المعاينة من مكان واحد.':'Explore properties for sale and rent, compare prices and sizes, and arrange viewings in one place.','✓ تجربة بحث واضحة':'✓ Clear property search','✓ صور وتفاصيل العقارات':'✓ Photos and property details','✓ تنظيم طلبات المعاينة':'✓ Organized viewing requests','ابحث عن عقار':'Search properties','المنطقة':'Area','نوع العقار':'Property type','نوع العملية':'Transaction type','⌕ ابحث':'⌕ Search','كل الأنواع':'All types','كل المناطق':'All areas','بيع أو إيجار':'Sale or rent','الكل':'All','للإيجار':'For rent','للبيع':'For sale',
+      'اختيارات تناسب احتياجاتك':'Options for your needs','أحدث العقارات':'Latest properties','قارن الصور والمساحات والأسعار والتقييمات قبل طلب المعاينة.':'Compare photos, sizes, prices and ratings before requesting a viewing.','بيانات عرض تجريبية':'Demo data','ترتيب حسب':'Sort by','الأحدث والمميزة':'Newest and featured','السعر من الأقل':'Price: low to high','السعر من الأعلى':'Price: high to low','أعلى تقييم':'Top rated','التفاصيل ←':'Details →','قيّم العقار':'Rate this property','تقييم تجريبي محلي':'Local demo rating','حالة الإعلان':'Listing status','معاملات أوضح':'Clearer transactions','تفاصيل في مكان واحد':'Details in one place','تنظيم المعاينة':'Organized viewings','تابع حالة طلبك':'Track your request','صور العقارات':'Property photos','استكشف التفاصيل':'Explore details','بحث ذكي':'Smart search','بمساعدة المساعد':'With AI assistance',
+      'خطوات أوضح ووقت أقل':'Clearer steps, less time','رحلتك لعقارك في 3 خطوات':'Your property journey in 3 steps','من البحث الأول لحد تنسيق موعد المعاينة.':'From your first search to scheduling a viewing.','حدد مواصفاتك':'Set your preferences','اختار المنطقة والميزانية ونوع العقار اللي يناسبك.':'Choose the area, budget and property type that suit you.','استكشف وقارن':'Explore and compare','شوف الصور والمساحة والسعر والتقييمات في مكان واحد.':'See photos, size, price and ratings in one place.','اطلب معاينة':'Request a viewing','حدد الموعد والمالك يراجع الطلب أو يقترح موعدًا بديلًا.':'Choose a time; the owner can approve or suggest another time.',
+      'ابدأ مع سمسار':'Get started with Samsar','إيه اللي محتاجه؟':'What would you like to do?','أنا صاحب عقار':'I am a property owner','أنا عميل':'I am a customer','سجّل بياناتك ثم جهّز إعلانك وصوره':'Register, then add your property details and photos','أنشئ حسابًا لمتابعة الإعلانات وطلبات المعاينة':'Create an account to track listings and viewing requests','متابعة العقار والمعاينة':'Track property and viewing','اكتب رقم العقار في خانة واحدة، من غير كلمة مرور':'Enter a property number in one field, no password needed','حساب صاحب العقار يبدأ بطلب اعتماد، ولا يحصل أي حساب جديد على صلاحيات الإدارة.':'Property-owner accounts require approval. New accounts never receive admin access.','معاك رقم عقار؟':'Have a property number?','اكتب رقم العقار لعرض بياناته مباشرة.':'Enter the property number to view its details.','عرض العقار':'View property','رقم العقار:':'Property number:','السعر الإجمالي':'Total price','شهريًا':'per month','العنوان التفصيلي':'Full address','وصف العقار':'Property description','الخدمات القريبة':'Nearby amenities','المساحة':'Area','الغرف':'Bedrooms','الحمامات':'Bathrooms','طلب معاينة العقار ←':'Request a viewing →','اسأل المساعد عن العقار':'Ask the AI about this property','استفسار عبر سمسار':'Ask Samsar','لا توجد إشعارات حاليًا.':'No notifications yet.','تسجيل الدخول':'Sign in','إنشاء حساب':'Create account','البريد الإلكتروني':'Email','كلمة المرور':'Password','حالة طلب المعاينة':'Viewing request status','قيد المراجعة':'Under review','منشور':'Published','مرفوض':'Rejected','مؤجر':'Rented','مسودة':'Draft','عرض تجريبي':'Demo','اكتب رقم العقار أولًا.':'Enter a property number first.','مش لاقيين عقار بالرقم ده. استخدم رقم العقار الظاهر على بطاقة الإعلان.':'No property found. Use the number shown on the listing card.'
+    };
+    const map=this.currentLanguage==='en'?translations:Object.fromEntries(Object.entries(translations).map(([ar,en])=>[en,ar]));
+    const walker=document.createTreeWalker(this.$el,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+    for(const node of nodes){const raw=node.nodeValue,key=raw.trim();if(map[key])node.nodeValue=raw.replace(key,map[key]);}
+    const attrs=this.currentLanguage==='en'?{'ابحث عن عقار':'Search properties','المنطقة أو اسم العقار...':'Area or property name...','رقم العقار':'Property number'}:{'Search properties':'ابحث عن عقار','Area or property name...':'المنطقة أو اسم العقار...','Property number':'رقم العقار'};
+    this.$el.querySelectorAll('input,textarea,button').forEach(el=>{for(const attr of ['placeholder','aria-label','title']){const value=el.getAttribute(attr);if(value&&attrs[value])el.setAttribute(attr,attrs[value]);}});
+  },
   propertyCode(property){if(!property)return '';if(property.listingCode!==undefined&&property.listingCode!==null&&String(property.listingCode).trim())return String(property.listingCode);if(property.isBackendRecord)return String(property.id||'').slice(0,8).toUpperCase();const digits=String(property.id||'').replace(/\D/g,'');return 'DEMO-'+digits.padStart(2,'0');},
-  lookupPropertyByCode(){const code=String(this.propertyCodeLookup||'').trim().toLocaleUpperCase('en');if(!code){this.propertyLookupError='اكتب رقم العقار أولًا.';return;}const allowed=this.properties.filter(p=>!p.isBackendRecord||p.backendStatus==='published'||p.ownerId===this.sessionUser?.id||['admin','staff'].includes(this.sessionUser?.role));const property=allowed.find(p=>this.propertyCode(p).toLocaleUpperCase('en')===code||String(p.title||'').trim().toLocaleUpperCase('ar')===code);if(!property){this.propertyLookupError='مش لاقيين عقار بالرقم ده. راجع الرقم الظاهر على بطاقة العقار.';return;}this.propertyLookupError='';this.openProperty(property);this.scrollTo('properties');},
+  trackingListingStatus(property){if(!property)return this.currentLanguage==='ar'?'غير معروف':'Unknown';if(property.isDemo)return this.currentLanguage==='ar'?'عرض تجريبي':'Demo';const states={draft:'مسودة',pending_review:'قيد المراجعة',published:'منشور',rejected:'مرفوض',rented:'مؤجر',archived:'مؤرشف'};const en={draft:'Draft',pending_review:'Under review',published:'Published',rejected:'Rejected',rented:'Rented',archived:'Archived'};const state=property.backendStatus||'published';return this.currentLanguage==='ar'?(states[state]||state):(en[state]||state);},
+  async lookupPropertyByCode(){const code=String(this.propertyCodeLookup||'').trim().toLocaleUpperCase('en');if(!code){this.propertyLookupError=this.currentLanguage==='ar'?'اكتب رقم العقار أولًا.':'Enter a property number first.';this.trackedProperty=null;return;}const allowed=this.properties.filter(p=>!p.isBackendRecord||p.backendStatus==='published'||p.ownerId===this.sessionUser?.id||['admin','staff'].includes(this.sessionUser?.role));const digits=code.replace(/\D/g,'');const property=allowed.find(p=>{const candidates=[this.propertyCode(p),p.listingCode,String(p.id||''),String(p.id||'').slice(0,8),String(p.title||'')].filter(Boolean).map(v=>String(v).trim().toLocaleUpperCase('en'));if(candidates.includes(code))return true;const propertyDigits=String(this.propertyCode(p)||'').replace(/\D/g,'');return !!digits&&propertyDigits===digits;});if(!property){this.trackedProperty=null;this.trackedViewingStatus='';this.propertyLookupError=this.currentLanguage==='ar'?'مش لاقيين عقار بالرقم ده. استخدم رقم العقار الظاهر على بطاقة الإعلان.':'No property found. Use the number shown on the listing card.';return;}this.propertyLookupError='';this.trackedProperty=property;const request=(this.viewings||[]).filter(v=>String(v.propertyId)===String(property.id)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))[0];this.trackedViewingStatus=request?(this.currentLanguage==='ar'?request.status:(({'requested':'Waiting for owner approval','owner_proposed':'Alternative time proposed','customer_proposed':'Customer proposed another time','confirmed':'Approved by owner','completed':'Viewing completed','cancelled':'Cancelled by customer','rejected':'Rejected by owner'})[request.backendStatus]||request.status)):'';if(property.isBackendRecord&&supabaseClient){try{const {data,error}=await supabaseClient.from('viewing_requests').select('status,created_at').eq('property_id',property.id).order('created_at',{ascending:false}).limit(1);if(!error&&data?.length){const status=data[0].status;const ar={requested:'بانتظار موافقة المالك',owner_proposed:'موعد بديل مقترح',customer_proposed:'موعد بديل من العميل',confirmed:'تمت الموافقة من المالك',completed:'اكتملت المعاينة',cancelled:'ملغاة من العميل',rejected:'مرفوضة من المالك'};const en={requested:'Waiting for owner approval',owner_proposed:'Alternative time proposed',customer_proposed:'Customer proposed another time',confirmed:'Approved by owner',completed:'Viewing completed',cancelled:'Cancelled by customer',rejected:'Rejected by owner'};this.trackedViewingStatus=this.currentLanguage==='ar'?(ar[status]||status):(en[status]||status);}}catch(error){console.warn('Public viewing status unavailable:',error);}}this.scrollTo('public-property-tracker');},
   money(value){
     return new Intl.NumberFormat('ar-EG',{style:'currency',currency:'EGP',maximumFractionDigits:0}).format(Number(value)||0);
   },
